@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CryptSharp.Core" Version="3.0.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="RFC3394.net" Version="1.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Misreant\" />
+	</ItemGroup>
+
+</Project>
