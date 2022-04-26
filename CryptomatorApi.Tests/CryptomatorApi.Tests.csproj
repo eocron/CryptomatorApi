@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\Cryptomator\01\NewFolder\**" />
+    <EmbeddedResource Remove="Data\Cryptomator\01\NewFolder\**" />
+    <None Remove="Data\Cryptomator\01\NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="6.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CryptomatorApi\CryptomatorApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Data\Cryptomator\01\d\G6\3F2JVV4KMAXCJX25CHHLPAPILNDYV4\92qijl-PISGRFhjCgJIEh8r2QiLwB21EuQw=.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\G6\3F2JVV4KMAXCJX25CHHLPAPILNDYV4\KtyDVw0HiUjRtmUwIC5b1zrYY-M9dtrE5tk=.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\H-st_A9MSp4Ejt5QwHpDkrb7SOKbVT22ES-78QlE.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\JkUgV7DQ9jLvROkyRC4FW33fRe156h8=.c9r\dir.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\KuzhEk7fcTyzspWU7r8DlZclyDPrvcY=.c9r\dir.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\Thcw1R3eFQdeC4mcxxRCwz9MPuX7urye0_3jlg==.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\NR\7MXPXVE6Z27HYUS6JVUQK36IAM6B2S\7EnzYf58U-F3LaEtSYTcMmbUzkS9CCpf9JM=.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\test.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\masterkey.cryptomator">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\masterkey.cryptomator.12C4778A.bkup">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

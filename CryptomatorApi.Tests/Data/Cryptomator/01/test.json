@@ -1,0 +1,10 @@
+﻿{
+  "password": "testtest",
+  "hashes": {
+    "small_file.txt": "052286e0be2a237ea15d08005cb01d84",
+    "big_file.bin": "50576fb5bddee8f2526099be4bdd479f",
+    "folder2\\file21.txt": "3527c9196a1a71586f62561ac47c0041",
+    "folder1\\file11.txt": "ff540c3a74632840e7def2b7b7862c00",
+    "folder1\\file12.txt": "052286e0be2a237ea15d08005cb01d84"
+  }
+}
