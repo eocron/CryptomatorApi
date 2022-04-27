@@ -14,4 +14,5 @@ public interface IFileProvider
     IAsyncEnumerable<string> GetDirectoriesAsync(string folderPath, CancellationToken cancellationToken);
     IAsyncEnumerable<FileSystemInfo> GetFileSystemInfosAsync(string folderPath, CancellationToken cancellationToken);
     IAsyncEnumerable<string> GetFilesAsync(string folderPath, CancellationToken cancellationToken);
+    Task<Stream> OpenRead(string encryptedFilePath, CancellationToken cancellationToken);
 }

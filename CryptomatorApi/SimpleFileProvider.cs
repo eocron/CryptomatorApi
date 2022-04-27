@@ -51,6 +51,11 @@ namespace CryptomatorApi
             }
         }
 
+        public Task<Stream> OpenRead(string encryptedFilePath, CancellationToken cancellationToken)
+        {
+            return Task.FromResult((Stream)new FileStream(encryptedFilePath, FileMode.Open));
+        }
+
         public Task<bool> HasFilesAsync(string folderPath, CancellationToken cancellationToken)
         {
             return Task.FromResult(new DirectoryInfo(folderPath).EnumerateFileSystemInfos().Any());
