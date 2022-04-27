@@ -12,6 +12,7 @@ internal sealed class FileDecryptStream : Stream
     private readonly Keys _keys;
     private int _blockNum;
     private byte[] _current;
+    private int _currentLength;
     private int _currentPos;
     private Header _header;
     private long _pos;
@@ -42,8 +43,8 @@ internal sealed class FileDecryptStream : Stream
     {
         if (_header == null)
         {
-            _header = ReadHeader(_inner, _keys);
-            _current = ReadBlock(_inner, _header, ref _blockNum);
+            _header = ReadHeader();
+            _current = ReadBlock(out _currentLength);
             _currentPos = 0;
         }
 
@@ -52,10 +53,10 @@ internal sealed class FileDecryptStream : Stream
 
         for (var i = 0; i < count; i++)
         {
-            if (_currentPos == _current.Length)
+            if (_currentPos == _current.Length || _currentPos == _currentLength)
             {
                 _currentPos = 0;
-                _current = ReadBlock(_inner, _header, ref _blockNum);
+                _current = ReadBlock(out _currentLength);
                 if (_current == null)
                     return i;
             }
@@ -88,51 +89,51 @@ internal sealed class FileDecryptStream : Stream
         base.Close();
     }
 
-    private byte[] ReadBlock(Stream stream, Header header, ref int blockNum)
+    private byte[] ReadBlock(out int read)
     {
         var chunk = _buffer;
-        var read = stream.Read(chunk, 0, chunk.Length);
+        read = _inner.Read(chunk, 0, chunk.Length);
         if (read == 0)
             return null;
 
         var chunkHeader = new HeaderRaw(chunk, 0, read);
 
-        var beBlockNum = BitConverter.GetBytes((long)blockNum);
+        var beBlockNum = BitConverter.GetBytes((long)_blockNum);
         if (BitConverter.IsLittleEndian)
             Array.Reverse(beBlockNum);
 
-        header.ChunkHmac.Initialize();
-        header.ChunkHmac.Update(header.HeaderNonce);
-        header.ChunkHmac.Update(beBlockNum);
-        header.ChunkHmac.Update(chunkHeader.Nonce);
-        header.ChunkHmac.DoFinal(chunkHeader.Payload);
-        if (!Equals(header.ChunkHmac.Hash, chunkHeader.Mac))
+        _header.ChunkHmac.Initialize();
+        _header.ChunkHmac.Update(_header.HeaderNonce);
+        _header.ChunkHmac.Update(beBlockNum);
+        _header.ChunkHmac.Update(chunkHeader.Nonce);
+        _header.ChunkHmac.DoFinal(chunkHeader.Payload);
+        if (!Equals(_header.ChunkHmac.Hash, chunkHeader.Mac))
             throw new IOException("Encrypted file fails integrity check.");
 
-        var result = AesCtr(chunkHeader.Payload, header.ContentKey, chunkHeader.Nonce);
-        blockNum++;
+        var result = AesCtr(chunkHeader.Payload, _header.ContentKey, chunkHeader.Nonce);
+        _blockNum++;
         return result;
     }
 
-    private Header ReadHeader(Stream stream, Keys keys)
+    private Header ReadHeader()
     {
         const int headerSize = 16 + 40 + 32;
         var chunk = _buffer;
-        if (stream.Read(chunk, 0, headerSize) != headerSize)
+        if (_inner.Read(chunk, 0, headerSize) != headerSize)
             throw new IOException("Invalid file header.");
 
         var chunkHeader = new HeaderRaw(chunk, 0, headerSize);
 
-        var headerHmac = new Hmac(keys.MacKey);
+        var headerHmac = new Hmac(_keys.MacKey);
         headerHmac.Update(chunkHeader.Nonce);
         headerHmac.DoFinal(chunkHeader.Payload);
         if (!Equals(headerHmac.Hash, chunkHeader.Mac))
             throw new IOException("Encrypted file fails integrity check.");
 
-        var cleartextPayload = AesCtr(chunkHeader.Payload, keys.MasterKey, chunkHeader.Nonce);
+        var cleartextPayload = AesCtr(chunkHeader.Payload, _keys.MasterKey, chunkHeader.Nonce);
         var contentKey = Slice(cleartextPayload, 8, 32);
 
-        return new Header(contentKey, new Hmac(keys.MacKey), chunkHeader.Nonce);
+        return new Header(contentKey, new Hmac(_keys.MacKey), chunkHeader.Nonce);
     }
 
     private static bool Equals(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)

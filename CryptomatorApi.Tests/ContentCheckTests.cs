@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using CryptomatorApi.Core;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -18,7 +19,7 @@ namespace CryptomatorApi.Tests
         [SetUp]
         public void Setup()
         {
-            _apiFactory = new CryptomatorApiFactory(new SimpleFileProvider());
+            _apiFactory = new CryptomatorApiFactory(new SimpleFileProvider(), new PathHelper(Path.DirectorySeparatorChar));
         }
 
         public static IEnumerable<TestCaseData> GetTests()

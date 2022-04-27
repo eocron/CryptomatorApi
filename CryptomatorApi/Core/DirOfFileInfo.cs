@@ -5,9 +5,9 @@ namespace CryptomatorApi.Core;
 
 public class DirOfFileInfo
 {
-    public readonly string Name;
-    public readonly string FullName;
     public readonly FileAttributes Attributes;
+    public readonly string FullName;
+    public readonly string Name;
 
     public DirOfFileInfo(string name, string fullName, FileAttributes attributes)
     {

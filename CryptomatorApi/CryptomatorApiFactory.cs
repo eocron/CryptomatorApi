@@ -16,10 +16,12 @@ namespace CryptomatorApi;
 public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
 {
     private readonly IFileProvider _fileProvider;
+    private readonly IPathHelper _pathHelper;
 
-    public CryptomatorApiFactory(IFileProvider fileProvider)
+    public CryptomatorApiFactory(IFileProvider fileProvider, IPathHelper pathHelper)
     {
         _fileProvider = fileProvider;
+        _pathHelper = pathHelper;
     }
 
     public async Task<ICryptomatorApi> Unlock(string password, string vaultPath, CancellationToken cancellationToken)
@@ -27,18 +29,18 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
         var masterKeyPath = "";
         VaultConfig vaultConfig = null;
 
-        var vaultConfigPath = Path.Combine(vaultPath, "vault.cryptomator");
+        var vaultConfigPath = _pathHelper.Combine(vaultPath, "vault.cryptomator");
         if (await _fileProvider.IsFileExistsAsync(vaultConfigPath, cancellationToken).ConfigureAwait(false))
         {
             vaultConfig = await LoadVaultConfig(vaultConfigPath, false, null, cancellationToken).ConfigureAwait(false);
             var kidParts = vaultConfig.VcH.Kid.Split(':');
             if (kidParts.Length != 2 || kidParts[0] != "masterkeyfile")
                 throw new Exception($"vault config id parameter unsupported : {vaultConfig.VcH.Kid}");
-            masterKeyPath = Path.Combine(vaultPath, kidParts[1]);
+            masterKeyPath = _pathHelper.Combine(vaultPath, kidParts[1]);
         }
         else
         {
-            masterKeyPath = Path.Combine(vaultPath, "masterkey.cryptomator");
+            masterKeyPath = _pathHelper.Combine(vaultPath, "masterkey.cryptomator");
         }
 
         if (!await _fileProvider.IsFileExistsAsync(masterKeyPath, cancellationToken).ConfigureAwait(false))
@@ -66,9 +68,9 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
             //Reload the vault config, this time verifying the signature
             vaultConfig = await LoadVaultConfig(vaultConfigPath, true, jwtKey, cancellationToken).ConfigureAwait(false);
 
-        if (mkey.Version == 6) return new V6CryptomatorApi(keys, vaultPath, _fileProvider);
+        if (mkey.Version == 6) return new V6CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
 
-        if (mkey.Version == 7) return new V7CryptomatorApi(keys, vaultPath, _fileProvider);
+        if (mkey.Version == 7) return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
 
         if (mkey.Version == 999)
         {
@@ -77,7 +79,7 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
             if (vaultConfig == null)
                 throw new Exception("Missing required vault configuration");
             if (vaultConfig.VcD.Format == 8)
-                return new V7CryptomatorApi(keys, vaultPath, _fileProvider);
+                return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
             throw new Exception(
                 $"Only format 8 vaults are currently support. Vault format is {vaultConfig.VcD.Format}");
         }
