@@ -1,6 +1,6 @@
 ﻿namespace CryptomatorApi.Core.Contract;
 
-public class MasterKey
+internal sealed class MasterKey
 {
     public string ScryptSalt { get; set; }
     public int ScryptCostParam { get; set; }

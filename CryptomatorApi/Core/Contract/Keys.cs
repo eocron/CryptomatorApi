@@ -1,6 +1,6 @@
 ﻿namespace CryptomatorApi.Core.Contract;
 
-public class Keys
+internal sealed class Keys
 {
     public byte[] MacKey;
     public byte[] MasterKey;

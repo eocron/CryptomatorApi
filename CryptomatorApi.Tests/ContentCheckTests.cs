@@ -57,7 +57,7 @@ namespace CryptomatorApi.Tests
                 var tmpFile = Path.GetTempFileName();
                 try
                 {
-                    await using var fileStream = await api.OpenRead(file, ct).ConfigureAwait(false);
+                    await using var fileStream = await api.OpenReadAsync(file, ct).ConfigureAwait(false);
                     var actualHash = GetMd5Hash(fileStream);
                     yield return new KeyValuePair<string, string>(file, actualHash);
                 }

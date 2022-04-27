@@ -16,9 +16,9 @@ namespace CryptomatorApi;
 
 internal sealed class V6CryptomatorApi : ICryptomatorApi
 {
+    private static readonly string PathSeparator = Path.DirectorySeparatorChar.ToString();
     private readonly IFileProvider _fileProvider;
     private readonly Keys _keys;
-    private static readonly string PathSeparator = Path.DirectorySeparatorChar.ToString();
     private readonly string _physicalPathRoot;
 
     private readonly HashAlgorithm _sha1 = SHA1.Create();
@@ -39,7 +39,8 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         _physicalPathRoot = PathJoin(fullDirName.Substring(0, 2), fullDirName.Substring(2));
     }
 
-    public async IAsyncEnumerable<string> GetFiles(string virtualPath, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<string> GetFiles(string virtualPath,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var virtualDirHierarchy = GetDirHierarchy(virtualPath);
         var stack = new Stack<DirInfo>();
@@ -47,7 +48,8 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         while (stack.Count > 0)
         {
             var dir = stack.Pop();
-            await foreach (var fsi in _fileProvider.GetFileSystemInfosAsync(dir.PhysicalPath, cancellationToken).ConfigureAwait(false))
+            await foreach (var fsi in _fileProvider.GetFileSystemInfosAsync(dir.PhysicalPath, cancellationToken)
+                               .ConfigureAwait(false))
             {
                 var encryptedFilename = fsi.Name;
                 if (encryptedFilename.StartsWith("0"))
@@ -79,7 +81,8 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         }
     }
 
-    public async IAsyncEnumerable<FolderInfo> GetFolders(string virtualPath, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<FolderInfo> GetFolders(string virtualPath,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var virtualDirHierarchy = GetDirHierarchy(virtualPath);
 
@@ -89,7 +92,8 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         while (stack.Count > 0)
         {
             var dir = stack.Pop();
-            await foreach (var d in _fileProvider.GetFilesAsync(dir.PhysicalPath, cancellationToken).ConfigureAwait(false))
+            await foreach (var d in _fileProvider.GetFilesAsync(dir.PhysicalPath, cancellationToken)
+                               .ConfigureAwait(false))
             {
                 var encryptedFilename = Path.GetFileName(d);
                 if (encryptedFilename.StartsWith("0"))
@@ -122,12 +126,13 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         }
     }
 
-    public async Task<Stream> OpenRead(string virtualPath, CancellationToken cancellationToken)
+    public async Task<Stream> OpenReadAsync(string virtualPath, CancellationToken cancellationToken)
     {
         var encryptedFilePath = await GetFilePhysicalPath(virtualPath, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrEmpty(encryptedFilePath))
             throw new ArgumentException("Unable to locate encrypted file");
-        return new FileDecryptStream(await _fileProvider.OpenRead(encryptedFilePath, cancellationToken).ConfigureAwait(false), _keys);
+        return new FileDecryptStream(
+            await _fileProvider.OpenReadAsync(encryptedFilePath, cancellationToken).ConfigureAwait(false), _keys);
     }
 
     private async Task<string> GetFilePhysicalPath(string virtualPath, CancellationToken cancellationToken)
@@ -145,7 +150,8 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         while (stack.Count > 0)
         {
             var dir = stack.Pop();
-            await foreach (var d in _fileProvider.GetFilesAsync(dir.PhysicalPath, cancellationToken).ConfigureAwait(false))
+            await foreach (var d in _fileProvider.GetFilesAsync(dir.PhysicalPath, cancellationToken)
+                               .ConfigureAwait(false))
             {
                 var encryptedFilename = Path.GetFileName(d);
                 if (encryptedFilename.StartsWith("0"))
@@ -256,8 +262,6 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
     }
 
 
-
-
     private string PathJoin(params string[] values)
     {
         var result = string.Join(PathSeparator, values);
@@ -271,7 +275,7 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         return result;
     }
 
-    private class DirInfo
+    private sealed class DirInfo
     {
         public string Name { get; set; }
         public string VirtualPath { get; set; }
@@ -279,6 +283,4 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         public string ParentDirId { get; set; }
         public int Level { get; set; }
     }
-
-
 }

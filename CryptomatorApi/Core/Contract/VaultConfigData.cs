@@ -1,6 +1,6 @@
 ﻿namespace CryptomatorApi.Core.Contract;
 
-public class VaultConfigData
+internal sealed class VaultConfigData
 {
     public int Format { get; set; }
     public int ShorteningThreshold { get; set; }
