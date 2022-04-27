@@ -12,7 +12,6 @@ internal sealed class FileDecryptStream : Stream
     private readonly Keys _keys;
     private int _blockNum;
     private byte[] _current;
-    private int _currentLength;
     private int _currentPos;
     private Header _header;
     private long _pos;
@@ -44,7 +43,7 @@ internal sealed class FileDecryptStream : Stream
         if (_header == null)
         {
             _header = ReadHeader();
-            _current = ReadBlock(out _currentLength);
+            _current = ReadBlock();
             _currentPos = 0;
         }
 
@@ -53,10 +52,10 @@ internal sealed class FileDecryptStream : Stream
 
         for (var i = 0; i < count; i++)
         {
-            if (_currentPos == _current.Length || _currentPos == _currentLength)
+            if (_currentPos == _current.Length)
             {
                 _currentPos = 0;
-                _current = ReadBlock(out _currentLength);
+                _current = ReadBlock();
                 if (_current == null)
                     return i;
             }
@@ -89,14 +88,15 @@ internal sealed class FileDecryptStream : Stream
         base.Close();
     }
 
-    private byte[] ReadBlock(out int read)
+    private byte[] ReadBlock()
     {
         var chunk = _buffer;
-        read = _inner.Read(chunk, 0, chunk.Length);
-        if (read == 0)
+        int tmpRead;
+        TryReadExactly(_inner, chunk, 0, chunk.Length, out tmpRead);
+        if (tmpRead == 0)
             return null;
 
-        var chunkHeader = new HeaderRaw(chunk, 0, read);
+        var chunkHeader = new HeaderRaw(chunk, 0, tmpRead);
 
         var beBlockNum = BitConverter.GetBytes((long)_blockNum);
         if (BitConverter.IsLittleEndian)
@@ -113,6 +113,29 @@ internal sealed class FileDecryptStream : Stream
         var result = AesCtr(chunkHeader.Payload, _header.ContentKey, chunkHeader.Nonce);
         _blockNum++;
         return result;
+    }
+
+    /// <summary>
+    /// Due to how some streams works we need to read exact blocks.
+    /// </summary>
+    /// <param name="stream"></param>
+    /// <param name="buffer"></param>
+    /// <param name="offset"></param>
+    /// <param name="count"></param>
+    /// <param name="totalRead"></param>
+    /// <returns></returns>
+    private static bool TryReadExactly(Stream stream, byte[] buffer, int offset, int count, out int totalRead)
+    {
+        totalRead = 0;
+        int read;
+        while (count > 0 && (read = stream.Read(buffer, offset, count)) > 0)
+        {
+            count -= read;
+            offset += read;
+            totalRead += read;
+        }
+
+        return count == 0;
     }
 
     private Header ReadHeader()

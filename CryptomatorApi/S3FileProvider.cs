@@ -48,13 +48,8 @@ public class S3FileProvider : IFileProvider
     public async Task<string> ReadAllTextAsync(string filePath, CancellationToken cancellationToken)
     {
         filePath = AddRoot(filePath);
-        var response = await _api.GetObjectAsync(new GetObjectRequest
-        {
-            BucketName = _bucketName,
-            Key = filePath
-        }, cancellationToken).ConfigureAwait(false);
-        await using var s = response.ResponseStream;
-        using var sr = new StreamReader(s);
+        await using var response = await _api.GetObjectStreamAsync(_bucketName, filePath, null, cancellationToken).ConfigureAwait(false);
+        using var sr = new StreamReader(response);
         return await sr.ReadToEndAsync().ConfigureAwait(false);
     }
 
