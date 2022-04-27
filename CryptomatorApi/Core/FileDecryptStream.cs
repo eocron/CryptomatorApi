@@ -41,7 +41,7 @@ namespace CryptomatorApi.Core
             if (_current == null)
                 return 0;
 
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 if (_currentPos == _current.Length)
                 {
@@ -98,10 +98,7 @@ namespace CryptomatorApi.Core
             if (read == 0)
                 return null;
 
-            var chunkNonce = Slice(chunk, 0, 16);
-            var chunkpayload = Slice(chunk, chunkNonce.Length, read - 48);
-            var chunkmac = Slice(chunk, chunkNonce.Length + chunkpayload.Length, 32);
-
+            var chunkHeader = new HeaderRaw(chunk, 0, read);
 
             var beBlockNum = BitConverter.GetBytes((long)blockNum);
             if (BitConverter.IsLittleEndian)
@@ -110,14 +107,27 @@ namespace CryptomatorApi.Core
             header.ChunkHmac.Initialize();
             header.ChunkHmac.Update(header.HeaderNonce);
             header.ChunkHmac.Update(beBlockNum);
-            header.ChunkHmac.Update(chunkNonce);
-            header.ChunkHmac.DoFinal(chunkpayload);
-            if (!header.ChunkHmac.Hash.SequenceEqual(chunkmac))
+            header.ChunkHmac.Update(chunkHeader.Nonce);
+            header.ChunkHmac.DoFinal(chunkHeader.Payload);
+            if (!Equals(header.ChunkHmac.Hash, chunkHeader.Mac))
                 throw new IOException("Encrypted file fails integrity check.");
 
-            var result = AesCtr(chunkpayload, header.ContentKey, chunkNonce);
+            var result = AesCtr(chunkHeader.Payload, header.ContentKey, chunkHeader.Nonce);
             blockNum++;
             return result;
+        }
+
+        public struct  HeaderRaw
+        {
+            public byte[] Nonce;
+            public byte[] Payload;
+            public byte[] Mac;
+            public HeaderRaw(byte[] buffer, int offset, int length)
+            {
+                Nonce = Slice(buffer, offset, 16);
+                Payload = Slice(buffer, offset + Nonce.Length, length - 48);
+                Mac = Slice(buffer, offset + Nonce.Length + Payload.Length, 32);
+            }
         }
 
         private static Header ReadHeader(Stream stream, Keys keys)
@@ -126,17 +136,15 @@ namespace CryptomatorApi.Core
             if (stream.Read(all) != all.Length)
                 throw new IOException("Invalid file header.");
 
-            var headerNonce = Slice(all, 0, 16);
-            var ciphertextPayload = Slice(all, 16,40);
-            var mac = Slice(all, 16+40, 32);
+            var chunkHeader = new HeaderRaw(all, 0, all.Length);
 
             var headerHmac = new Hmac(keys.MacKey);
-            headerHmac.Update(headerNonce);
-            headerHmac.DoFinal(ciphertextPayload);
-            if (!headerHmac.Hash.SequenceEqual(mac))
+            headerHmac.Update(chunkHeader.Nonce);
+            headerHmac.DoFinal(chunkHeader.Payload);
+            if (!Equals(headerHmac.Hash, chunkHeader.Mac))
                 throw new IOException("Encrypted file fails integrity check.");
 
-            var cleartextPayload = AesCtr(ciphertextPayload, keys.MasterKey, headerNonce);
+            var cleartextPayload = AesCtr(chunkHeader.Payload, keys.MasterKey, chunkHeader.Nonce);
             var contentKey = Slice(cleartextPayload, 8, 32);
 
             var chunkHmac = new Hmac(keys.MacKey);
@@ -145,36 +153,28 @@ namespace CryptomatorApi.Core
             {
                 ContentKey = contentKey,
                 ChunkHmac = chunkHmac,
-                HeaderNonce = headerNonce
+                HeaderNonce = chunkHeader.Nonce
             };
         }
 
-        private static Header ReadHeader(BinaryReader reader, Keys keys)
+        private static bool Equals(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)
         {
-
-            var headerNonce = reader.ReadBytes(16);
-            var ciphertextPayload = reader.ReadBytes(40);
-            var mac = reader.ReadBytes(32);
-
-            var headerHmac = new Hmac(keys.MacKey);
-            headerHmac.Update(headerNonce);
-            headerHmac.DoFinal(ciphertextPayload);
-            if (!headerHmac.Hash.SequenceEqual(mac))
-                throw new IOException("Encrypted file fails integrity check.");
-
-            var cleartextPayload = AesCtr(ciphertextPayload, keys.MasterKey, headerNonce);
-            var contentKey = Slice(cleartextPayload, 8, 32);
-
-            var chunkHmac = new Hmac(keys.MacKey);
-
-            return new Header
+            if (a1.Length != a2.Length)
             {
-                ContentKey = contentKey,
-                ChunkHmac = chunkHmac,
-                HeaderNonce = headerNonce
-            };
+                return false;
+            }
+
+            for (var i = 0; i < a1.Length; i++)
+            {
+                if (a1[i] != a2[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
-        
+
         private class Header
         {
             public byte[] ContentKey;
@@ -207,7 +207,7 @@ namespace CryptomatorApi.Core
 
             public void Update(byte[] input)
             {
-                TransformBlock(input, 0, input.Length, input, 0);
+                TransformBlock(input, 0, input.Length, null, 0);
             }
 
             public void DoFinal(byte[] input)
