@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core
@@ -11,7 +8,7 @@ namespace CryptomatorApi.Core
     public class FileDecryptStream : Stream
     {
         private readonly Stream _inner;
-        private byte[] _buffer = new byte[32768 + 48];
+        private readonly byte[] _buffer = new byte[32768 + 48];
         private int _blockNum = 0;
         private Header _header;
         private readonly Keys _keys;
@@ -92,7 +89,6 @@ namespace CryptomatorApi.Core
 
         private byte[] ReadBlock(Stream stream, Header header, ref int blockNum)
         {
-            //read file content payload
             var chunk = _buffer;
             var read = stream.Read(chunk, 0, chunk.Length);
             if (read == 0)
@@ -117,11 +113,11 @@ namespace CryptomatorApi.Core
             return result;
         }
 
-        public struct  HeaderRaw
+        private ref struct  HeaderRaw
         {
-            public byte[] Nonce;
-            public byte[] Payload;
-            public byte[] Mac;
+            public readonly ReadOnlySpan<byte> Nonce;
+            public readonly ReadOnlySpan<byte> Payload;
+            public readonly ReadOnlySpan<byte> Mac;
             public HeaderRaw(byte[] buffer, int offset, int length)
             {
                 Nonce = Slice(buffer, offset, 16);
@@ -130,13 +126,14 @@ namespace CryptomatorApi.Core
             }
         }
 
-        private static Header ReadHeader(Stream stream, Keys keys)
+        private Header ReadHeader(Stream stream, Keys keys)
         {
-            var all = new byte[16 + 40 + 32];
-            if (stream.Read(all) != all.Length)
+            const int headerSize = 16 + 40 + 32;
+            var chunk = _buffer;
+            if (stream.Read(chunk, 0, headerSize) != headerSize)
                 throw new IOException("Invalid file header.");
 
-            var chunkHeader = new HeaderRaw(all, 0, all.Length);
+            var chunkHeader = new HeaderRaw(chunk, 0, headerSize);
 
             var headerHmac = new Hmac(keys.MacKey);
             headerHmac.Update(chunkHeader.Nonce);
@@ -146,15 +143,8 @@ namespace CryptomatorApi.Core
 
             var cleartextPayload = AesCtr(chunkHeader.Payload, keys.MasterKey, chunkHeader.Nonce);
             var contentKey = Slice(cleartextPayload, 8, 32);
-
-            var chunkHmac = new Hmac(keys.MacKey);
-
-            return new Header
-            {
-                ContentKey = contentKey,
-                ChunkHmac = chunkHmac,
-                HeaderNonce = chunkHeader.Nonce
-            };
+            
+            return new Header(contentKey, new Hmac(keys.MacKey), chunkHeader.Nonce);
         }
 
         private static bool Equals(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)
@@ -177,26 +167,31 @@ namespace CryptomatorApi.Core
 
         private class Header
         {
-            public byte[] ContentKey;
-            public Hmac ChunkHmac;
-            public byte[] HeaderNonce;
+            public readonly byte[] ContentKey;
+            public readonly Hmac ChunkHmac;
+            public readonly byte[] HeaderNonce;
+
+            public Header(ReadOnlySpan<byte> contentKey, Hmac chunkHmac, ReadOnlySpan<byte> headerNonce)
+            {
+                ContentKey = contentKey.ToArray();
+                ChunkHmac = chunkHmac;
+                HeaderNonce = headerNonce.ToArray();
+            }
         }
 
-        private static byte[] Slice(byte[] input, int offset, int length)
+        private static ReadOnlySpan<byte> Slice(byte[] input, int offset, int length)
         {
-            var output = new byte[length];
-            Array.Copy(input, offset, output, 0, length);
-            return output;
+            return input.AsSpan(offset, length);
         }
 
-        private static byte[] AesCtr(byte[] input, byte[] key, byte[] iv)
+        private static byte[] AesCtr(ReadOnlySpan<byte> input, byte[] key, ReadOnlySpan<byte> ivSpan)
         {
-            iv = (byte[])iv.Clone(); //use a copy to avoid updating original IV.
+            var iv = ivSpan.ToArray(); //use a copy to avoid updating original IV.
 
             //Since we're always decrypting an in-memory chunk we don't bother with streams
             using var aesAlg = new Aes128CounterModeSymmetricAlgorithm(iv);
             var decryptor = aesAlg.CreateDecryptor(key, iv);
-            return decryptor.TransformFinalBlock(input, 0, input.Length);
+            return decryptor.TransformFinalBlock(input.ToArray(), 0, input.Length);
         }
 
         private sealed class Hmac : HMACSHA256
@@ -205,14 +200,15 @@ namespace CryptomatorApi.Core
             {
             }
 
-            public void Update(byte[] input)
+            public void Update(ReadOnlySpan<byte> input)
             {
-                TransformBlock(input, 0, input.Length, null, 0);
+                
+                TransformBlock(input.ToArray(), 0, input.Length, null, 0);
             }
 
-            public void DoFinal(byte[] input)
+            public void DoFinal(ReadOnlySpan<byte> input)
             {
-                TransformFinalBlock(input, 0, input.Length);
+                TransformFinalBlock(input.ToArray(), 0, input.Length);
             }
         }
     }
