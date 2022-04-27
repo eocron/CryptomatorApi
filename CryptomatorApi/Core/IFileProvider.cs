@@ -12,7 +12,7 @@ public interface IFileProvider
     Task<string[]> ReadAllLinesAsync(string filePath, CancellationToken cancellationToken);
     Task<bool> HasFilesAsync(string folderPath, CancellationToken cancellationToken);
     IAsyncEnumerable<string> GetDirectoriesAsync(string folderPath, CancellationToken cancellationToken);
-    IAsyncEnumerable<FileSystemInfo> GetFileSystemInfosAsync(string folderPath, CancellationToken cancellationToken);
+    IAsyncEnumerable<DirOfFileInfo> GetFileSystemInfosAsync(string folderPath, CancellationToken cancellationToken);
     IAsyncEnumerable<string> GetFilesAsync(string folderPath, CancellationToken cancellationToken);
     Task<Stream> OpenReadAsync(string encryptedFilePath, CancellationToken cancellationToken);
 }

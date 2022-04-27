@@ -26,13 +26,14 @@ public sealed class SimpleFileProvider : IFileProvider
         return File.ReadAllLinesAsync(filePath, cancellationToken);
     }
 
-    public async IAsyncEnumerable<FileSystemInfo> GetFileSystemInfosAsync(string folderPath,
+    public async IAsyncEnumerable<DirOfFileInfo> GetFileSystemInfosAsync(string folderPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var all = new DirectoryInfo(folderPath).EnumerateFileSystemInfos();
         try
         {
-            foreach (var fileSystemInfo in all) yield return fileSystemInfo;
+            foreach (var fileSystemInfo in all)
+                yield return new DirOfFileInfo(fileSystemInfo.Name, fileSystemInfo.FullName, fileSystemInfo.Attributes);
         }
         finally
         {

@@ -134,7 +134,7 @@ internal sealed class V7CryptomatorApi : ICryptomatorApi
             await _fileProvider.OpenReadAsync(encryptedFilePath, cancellationToken).ConfigureAwait(false), _keys);
     }
 
-    private async Task<bool> IsVirtualDirectory(FileSystemInfo f, CancellationToken cancellationToken)
+    private async Task<bool> IsVirtualDirectory(DirOfFileInfo f, CancellationToken cancellationToken)
     {
         if ((f.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
             return await IsVirtualDirectory(f.FullName, cancellationToken).ConfigureAwait(false);
