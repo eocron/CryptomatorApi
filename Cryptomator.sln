@@ -5,7 +5,9 @@ VisualStudioVersion = 17.1.32414.318
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CryptomatorApi", "CryptomatorApi\CryptomatorApi.csproj", "{F7B426D5-19FB-448C-8DCE-D81957527F42}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptomatorApi.Tests", "CryptomatorApi.Tests\CryptomatorApi.Tests.csproj", "{2D82220A-37A2-451A-BFA0-7E509A8D4FBA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CryptomatorApi.Tests", "CryptomatorApi.Tests\CryptomatorApi.Tests.csproj", "{2D82220A-37A2-451A-BFA0-7E509A8D4FBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cryptomator.WebApi", "Cryptomator.WebApi\Cryptomator.WebApi.csproj", "{F8D713BE-B4A6-4E00-A5EB-C4222CD5BD96}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{2D82220A-37A2-451A-BFA0-7E509A8D4FBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2D82220A-37A2-451A-BFA0-7E509A8D4FBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2D82220A-37A2-451A-BFA0-7E509A8D4FBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8D713BE-B4A6-4E00-A5EB-C4222CD5BD96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8D713BE-B4A6-4E00-A5EB-C4222CD5BD96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8D713BE-B4A6-4E00-A5EB-C4222CD5BD96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8D713BE-B4A6-4E00-A5EB-C4222CD5BD96}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
