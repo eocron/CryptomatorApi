@@ -101,7 +101,7 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
         }
     }
 
-    public static VaultConfig GetVaultConfigFromJwt(string token, bool verify = false, byte[] key = null)
+    private static VaultConfig GetVaultConfigFromJwt(string token, bool verify = false, byte[] key = null)
     {
         try
         {
