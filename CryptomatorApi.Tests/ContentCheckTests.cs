@@ -39,7 +39,7 @@ namespace CryptomatorApi.Tests
         {
             var ct = CancellationToken.None;
             var actualHashes = new Dictionary<string, string>();
-            var api = await _apiFactory.Create(password, folder, ct);
+            var api = _apiFactory.Create(password, folder);
 
             await foreach (var file in GetAllFiles(api, "", ct))
             {
@@ -57,8 +57,8 @@ namespace CryptomatorApi.Tests
                 var tmpFile = Path.GetTempFileName();
                 try
                 {
-                    await api.DecryptFile(file, tmpFile, ct);
-                    var actualHash = GetMd5Hash(tmpFile);
+                    await using var fileStream = await api.OpenRead(file, ct).ConfigureAwait(false);
+                    var actualHash = GetMd5Hash(fileStream);
                     yield return new KeyValuePair<string, string>(file, actualHash);
                 }
                 finally
@@ -76,10 +76,9 @@ namespace CryptomatorApi.Tests
             }
         }
 
-        private string GetMd5Hash(string filePath)
+        private string GetMd5Hash(Stream stream)
         {
             using var md5 = MD5.Create();
-            using var stream = File.OpenRead(filePath);
             var hash = md5.ComputeHash(stream);
             return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
         }

@@ -22,7 +22,12 @@ public sealed class CryptomatorApiFactory
         _fileProvider = fileProvider;
     }
 
-    public async Task<ICryptomatorApi> Create(string password, string vaultPath, CancellationToken cancellationToken)
+    public ICryptomatorApi Create(string password, string vaultPath)
+    {
+        return new LazyCryptomatorApi(ct => CreateAsync(password, vaultPath, ct));
+    }
+
+    private async Task<ICryptomatorApi> CreateAsync(string password, string vaultPath, CancellationToken cancellationToken)
     {
         var masterKeyPath = "";
         VaultConfig vaultConfig = null;

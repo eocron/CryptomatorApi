@@ -122,22 +122,18 @@ internal sealed class V6CryptomatorApi : ICryptomatorApi
         }
     }
 
-
-    public async Task DecryptFile(string virtualPath, string outFile, CancellationToken cancellationToken)
-    {
-        await using var outputStream = new FileStream(outFile, FileMode.Create);
-        await DecryptFile(virtualPath, outputStream, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task DecryptFile(string virtualPath, Stream outputStream, CancellationToken cancellationToken)
+    public async Task<Stream> OpenRead(string virtualPath, CancellationToken cancellationToken)
     {
         var encryptedFilePath = await GetFilePhysicalPath(virtualPath, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrEmpty(encryptedFilePath))
             throw new ArgumentException("Unable to locate encrypted file");
-
-        await using var encryptedStream = new FileStream(encryptedFilePath, FileMode.Open);
-        using var reader = new BinaryReader(encryptedStream);
-        FileDecryptStream.DecryptStream(encryptedStream, outputStream, _keys);
+        return new FileDecryptStream(new FileStream(encryptedFilePath, FileMode.Open), _keys);
+        //var outputStream = new MemoryStream();
+        //await using var encryptedStream = new FileStream(encryptedFilePath, FileMode.Open);
+        //using var reader = new BinaryReader(encryptedStream);
+        //FileDecryptStream.DecryptStream(encryptedStream, outputStream, _keys);
+        //outputStream.Position = 0;
+        //return outputStream;
     }
 
     private async Task<string> GetFilePhysicalPath(string virtualPath, CancellationToken cancellationToken)

@@ -1,21 +1,61 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core
 {
     public class FileDecryptStream : Stream
     {
+        private readonly Stream _inner;
+        private byte[] _buffer = new byte[32768 + 48];
+        private int _blockNum = 0;
+        private Header _header;
+        private readonly Keys _keys;
+        private byte[] _current;
+        private int _currentPos;
+        private long _pos;
+        public FileDecryptStream(Stream inner, Keys keys)
+        {
+            _keys = keys;
+            _inner = inner;
+        }
+
         public override void Flush()
         {
-            throw new NotImplementedException();
+            _inner.Flush();
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            throw new NotImplementedException();
+            if (_header == null)
+            {
+                _header = ReadHeader(_inner, _keys);
+                _current = ReadBlock(_inner, _header, ref _blockNum);
+                _currentPos = 0;
+            }
+
+            if (_current == null)
+                return 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (_currentPos == _current.Length)
+                {
+                    _currentPos = 0;
+                    _current = ReadBlock(_inner, _header, ref _blockNum);
+                    if (_current == null)
+                        return i;
+                }
+
+                buffer[i] = _current[_currentPos++];
+                _pos++;
+            }
+
+            return count;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -33,18 +73,84 @@ namespace CryptomatorApi.Core
             throw new NotImplementedException();
         }
 
-        public override bool CanRead { get; }
-        public override bool CanSeek { get; }
-        public override bool CanWrite { get; }
-        public override long Length { get; }
-        public override long Position { get; set; }
-
-
-        public static void DecryptStream(Stream encryptedStream, Stream output, Keys keys)
+        public override void Close()
         {
-            using var reader = new BinaryReader(encryptedStream);
-            using var writer = new BinaryWriter(output);
-            //Read file header
+            _inner.Close();
+            base.Close();
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => _pos;
+            set => throw new NotSupportedException();
+        }
+
+        private byte[] ReadBlock(Stream stream, Header header, ref int blockNum)
+        {
+            //read file content payload
+            var chunk = _buffer;
+            var read = stream.Read(chunk, 0, chunk.Length);
+            if (read == 0)
+                return null;
+
+            var chunkNonce = Slice(chunk, 0, 16);
+            var chunkpayload = Slice(chunk, chunkNonce.Length, read - 48);
+            var chunkmac = Slice(chunk, chunkNonce.Length + chunkpayload.Length, 32);
+
+
+            var beBlockNum = BitConverter.GetBytes((long)blockNum);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(beBlockNum);
+
+            header.ChunkHmac.Initialize();
+            header.ChunkHmac.Update(header.HeaderNonce);
+            header.ChunkHmac.Update(beBlockNum);
+            header.ChunkHmac.Update(chunkNonce);
+            header.ChunkHmac.DoFinal(chunkpayload);
+            if (!header.ChunkHmac.Hash.SequenceEqual(chunkmac))
+                throw new IOException("Encrypted file fails integrity check.");
+
+            var result = AesCtr(chunkpayload, header.ContentKey, chunkNonce);
+            blockNum++;
+            return result;
+        }
+
+        private static Header ReadHeader(Stream stream, Keys keys)
+        {
+            var all = new byte[16 + 40 + 32];
+            if (stream.Read(all) != all.Length)
+                throw new IOException("Invalid file header.");
+
+            var headerNonce = Slice(all, 0, 16);
+            var ciphertextPayload = Slice(all, 16,40);
+            var mac = Slice(all, 16+40, 32);
+
+            var headerHmac = new Hmac(keys.MacKey);
+            headerHmac.Update(headerNonce);
+            headerHmac.DoFinal(ciphertextPayload);
+            if (!headerHmac.Hash.SequenceEqual(mac))
+                throw new IOException("Encrypted file fails integrity check.");
+
+            var cleartextPayload = AesCtr(ciphertextPayload, keys.MasterKey, headerNonce);
+            var contentKey = Slice(cleartextPayload, 8, 32);
+
+            var chunkHmac = new Hmac(keys.MacKey);
+
+            return new Header
+            {
+                ContentKey = contentKey,
+                ChunkHmac = chunkHmac,
+                HeaderNonce = headerNonce
+            };
+        }
+
+        private static Header ReadHeader(BinaryReader reader, Keys keys)
+        {
 
             var headerNonce = reader.ReadBytes(16);
             var ciphertextPayload = reader.ReadBytes(40);
@@ -61,34 +167,19 @@ namespace CryptomatorApi.Core
 
             var chunkHmac = new Hmac(keys.MacKey);
 
-            //Process all chunks
-            for (var blocknum = 0; ; ++blocknum)
+            return new Header
             {
-                //read file content payload
-                var chunk = reader.ReadBytes(32768 + 48);
-                if (chunk.Length == 0)
-                    break;
-
-                var chunkNonce = Slice(chunk, 0, 16);
-                var chunkpayload = Slice(chunk, chunkNonce.Length, chunk.Length - 48);
-                var chunkmac = Slice(chunk, chunkNonce.Length + chunkpayload.Length, 32);
-
-
-                var beBlockNum = BitConverter.GetBytes((long)blocknum);
-                if (BitConverter.IsLittleEndian)
-                    Array.Reverse(beBlockNum);
-
-                chunkHmac.Initialize();
-                chunkHmac.Update(headerNonce);
-                chunkHmac.Update(beBlockNum);
-                chunkHmac.Update(chunkNonce);
-                chunkHmac.DoFinal(chunkpayload);
-                if (!chunkHmac.Hash.SequenceEqual(chunkmac))
-                    throw new IOException("Encrypted file fails integrity check.");
-
-                var decryptedContent = AesCtr(chunkpayload, contentKey, chunkNonce);
-                writer.Write(decryptedContent);
-            }
+                ContentKey = contentKey,
+                ChunkHmac = chunkHmac,
+                HeaderNonce = headerNonce
+            };
+        }
+        
+        private class Header
+        {
+            public byte[] ContentKey;
+            public Hmac ChunkHmac;
+            public byte[] HeaderNonce;
         }
 
         private static byte[] Slice(byte[] input, int offset, int length)
