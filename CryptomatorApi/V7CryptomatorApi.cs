@@ -127,12 +127,6 @@ internal sealed class V7CryptomatorApi : ICryptomatorApi
         if (string.IsNullOrEmpty(encryptedFilePath))
             throw new ArgumentException("Unable to locate encrypted file");
         return new FileDecryptStream(new FileStream(encryptedFilePath, FileMode.Open), _keys);
-        //var outputStream = new MemoryStream();
-        //await using var encryptedStream = new FileStream(encryptedFilePath, FileMode.Open);
-        //using var reader = new BinaryReader(encryptedStream);
-        //FileDecryptStream.DecryptStream(encryptedStream, outputStream, _keys);
-        //outputStream.Position = 0;
-        //return outputStream;
     }
 
     private async Task<bool> IsVirtualDirectory(FileSystemInfo f, CancellationToken cancellationToken)

@@ -13,7 +13,7 @@ using RFC3394;
 
 namespace CryptomatorApi;
 
-public sealed class CryptomatorApiFactory
+public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
 {
     private readonly IFileProvider _fileProvider;
 
@@ -22,12 +22,7 @@ public sealed class CryptomatorApiFactory
         _fileProvider = fileProvider;
     }
 
-    public ICryptomatorApi Create(string password, string vaultPath)
-    {
-        return new LazyCryptomatorApi(ct => CreateAsync(password, vaultPath, ct));
-    }
-
-    private async Task<ICryptomatorApi> CreateAsync(string password, string vaultPath, CancellationToken cancellationToken)
+    public async Task<ICryptomatorApi> Unlock(string password, string vaultPath, CancellationToken cancellationToken)
     {
         var masterKeyPath = "";
         VaultConfig vaultConfig = null;
