@@ -1,23 +1,9 @@
-using System;
 using System.Security.Cryptography;
 
 namespace CryptomatorApi.Misreant;
 
 internal static class Utils
 {
-    private static readonly byte[] DeBruijn =
-    {
-        0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
-        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
-    };
-
-    private static readonly RandomNumberGenerator Random = RandomNumberGenerator.Create();
-
-    public static ArraySegment<T> Slice<T>(this ArraySegment<T> seg, int index)
-    {
-        return new ArraySegment<T>(seg.Array, seg.Offset + index, seg.Count - index);
-    }
-
     public static void Multiply(byte[] input)
     {
         var carry = input[0] >> 7;
@@ -50,14 +36,6 @@ internal static class Utils
         return (dividend + divisor - 1) / divisor;
     }
 
-    public static byte[] GetRandomBytes(int size)
-    {
-        var bytes = new byte[size];
-        Random.GetBytes(bytes);
-
-        return bytes;
-    }
-
     public static Aes CreateAes(CipherMode mode)
     {
         var aes = Aes.Create();
@@ -66,10 +44,5 @@ internal static class Utils
         aes.Padding = PaddingMode.None;
 
         return aes;
-    }
-
-    public static int TrailingZeros(uint x)
-    {
-        return x > 0 ? DeBruijn[(uint)((x & -x) * 0x077CB531) >> (32 - 5)] : 32;
     }
 }

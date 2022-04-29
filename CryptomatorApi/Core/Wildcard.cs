@@ -9,11 +9,6 @@ namespace CryptomatorApi.Core
         {
         }
 
-        public Wildcard(string wildcardPattern, RegexOptions regexOptions)
-            : base(WildcardPatternToRegex(wildcardPattern), regexOptions | RegexOptions.IgnoreCase)
-        {
-        }
-
         private static string WildcardPatternToRegex(string wildcardPattern)
         {
             string patternWithWildcards = "^" + Escape(wildcardPattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";

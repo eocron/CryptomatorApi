@@ -63,16 +63,6 @@ public sealed class AesSiv : IDisposable
     }
 
     /// <summary>
-    ///     Initializes a new instance of the AES-PMAC-SIV algorithm with the specified key.
-    /// </summary>
-    /// <param name="key">The secret key for AES-PMAC-SIV encryption.</param>
-    /// <returns>An AES-PMAC-SIV instance.</returns>
-    public static AesSiv CreateAesPmacSiv(byte[] key)
-    {
-        return new AesSiv(AesPmac.Create, key);
-    }
-
-    /// <summary>
     ///     Seal encrypts and authenticates plaintext, authenticates the given
     ///     associated data items, and returns the result. For nonce-based
     ///     encryption, the nonce should be the last associated data item.

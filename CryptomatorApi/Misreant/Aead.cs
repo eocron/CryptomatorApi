@@ -31,36 +31,6 @@ public sealed class Aead : IDisposable
     }
 
     /// <summary>
-    ///     Generates a random nonce.
-    /// </summary>
-    /// <param name="size">Nonce size in bytes.</param>
-    /// <returns>Generated nonce.</returns>
-    public static byte[] GenerateNonce(int size)
-    {
-        if (size < Constants.BlockSize) throw new CryptographicException("Nonce size is too small.");
-
-        return Utils.GetRandomBytes(size);
-    }
-
-    /// <summary>
-    ///     Generates a random 32-byte encryption key.
-    /// </summary>
-    /// <returns>Generated key.</returns>
-    public static byte[] GenerateKey256()
-    {
-        return Utils.GetRandomBytes(Constants.AesSiv256KeySize);
-    }
-
-    /// <summary>
-    ///     Generates a random 64-byte encryption key.
-    /// </summary>
-    /// <returns>Generated key.</returns>
-    public static byte[] GenerateKey512()
-    {
-        return Utils.GetRandomBytes(Constants.AesSiv512KeySize);
-    }
-
-    /// <summary>
     ///     Initializes a new AEAD instance using the AES-CMAC-SIV algorithm.
     /// </summary>
     /// <param name="key">The secret key for AES-CMAC-SIV encryption.</param>
@@ -68,16 +38,6 @@ public sealed class Aead : IDisposable
     public static Aead CreateAesCmacSiv(byte[] key)
     {
         return new Aead(AesSiv.CreateAesCmacSiv(key));
-    }
-
-    /// <summary>
-    ///     Initializes a new AEAD instance using the AES-PMAC-SIV algorithm.
-    /// </summary>
-    /// <param name="key">The secret key for AES-PMAC-SIV encryption.</param>
-    /// <returns>An AEAD instance.</returns>
-    public static Aead CreateAesPmacSiv(byte[] key)
-    {
-        return new Aead(AesSiv.CreateAesPmacSiv(key));
     }
 
     /// <summary>

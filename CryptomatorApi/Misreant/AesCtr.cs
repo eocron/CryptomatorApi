@@ -19,31 +19,6 @@ internal sealed class AesCtr : IDisposable
     private ArraySegment<byte> _keyStream;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="AesCtr" /> class with the specified key and initialization vector.
-    /// </summary>
-    /// <param name="key">The secret key for <see cref="AesCtr" /> encryption.</param>
-    /// <param name="iv">The initialization vector for <see cref="AesCtr" /> encryption.</param>
-    public AesCtr(byte[] key, byte[] iv)
-    {
-        if (key == null) throw new ArgumentNullException(nameof(key));
-
-        if (iv == null) throw new ArgumentNullException(nameof(iv));
-
-        if (iv.Length != BlockSize)
-            throw new CryptographicException(
-                "Specified initialization vector (IV) does not match the block size for this algorithm.");
-
-        _aes = Aes.Create();
-        _aes.Mode = CipherMode.ECB;
-
-        _encryptor = _aes.CreateEncryptor(key, null);
-        _counter = (byte[])iv.Clone();
-
-        var buffer = new byte[KeyStreamBufferSize];
-        _keyStream = new ArraySegment<byte>(buffer, 0, 0);
-    }
-
-    /// <summary>
     ///     Initializes a new instance of the <see cref="AesCtr" /> class with the
     ///     specified key. For internal use only. The initialization vector will
     ///     be set later by the <see cref="AesSiv" /> object.
