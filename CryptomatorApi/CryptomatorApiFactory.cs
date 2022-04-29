@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CryptomatorApi.Core;
 using CryptomatorApi.Core.Contract;
+using CryptomatorApi.Providers;
 using CryptSharp.Core.Utility;
 using Newtonsoft.Json;
 using RFC3394;

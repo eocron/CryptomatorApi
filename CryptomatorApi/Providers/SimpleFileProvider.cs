@@ -5,9 +5,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using CryptomatorApi.Core;
 
-namespace CryptomatorApi;
+namespace CryptomatorApi.Providers;
 
 public sealed class SimpleFileProvider : IFileProvider
 {
@@ -26,14 +25,14 @@ public sealed class SimpleFileProvider : IFileProvider
         return File.ReadAllLinesAsync(filePath, cancellationToken);
     }
 
-    public async IAsyncEnumerable<DirOfFileInfo> GetFileSystemInfosAsync(string folderPath,
+    public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(string folderPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var all = new DirectoryInfo(folderPath).EnumerateFileSystemInfos();
         try
         {
             foreach (var fileSystemInfo in all)
-                yield return new DirOfFileInfo(fileSystemInfo.Name, fileSystemInfo.FullName, fileSystemInfo.Attributes);
+                yield return Map(fileSystemInfo);
         }
         finally
         {
@@ -41,11 +40,19 @@ public sealed class SimpleFileProvider : IFileProvider
         }
     }
 
-    public async IAsyncEnumerable<string> GetFilesAsync(string folderPath,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    private CryptomatorFileSystemInfo Map(FileSystemInfo info)
     {
-        var files = Directory.GetFiles(folderPath);
-        foreach (var file in files) yield return file;
+        if ((info.Attributes & FileAttributes.Directory) != 0)
+            return new CryptomatorDirectoryInfo
+            {
+                FullName = info.FullName,
+                Name = info.Name
+            };
+        return new CryptomatorFileInfo
+        {
+            FullName = info.FullName,
+            Name = info.Name
+        };
     }
 
     public Task<Stream> OpenReadAsync(string encryptedFilePath, CancellationToken cancellationToken)
@@ -56,12 +63,5 @@ public sealed class SimpleFileProvider : IFileProvider
     public Task<bool> HasFilesAsync(string folderPath, CancellationToken cancellationToken)
     {
         return Task.FromResult(new DirectoryInfo(folderPath).EnumerateFileSystemInfos().Any());
-    }
-
-    public async IAsyncEnumerable<string> GetDirectoriesAsync(string folderPath,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var dirs = Directory.GetDirectories(folderPath);
-        foreach (var dir in dirs) yield return dir;
     }
 }

@@ -19,7 +19,7 @@ namespace Cryptomator.WebApi.Controllers
             _contentTypeProvider = contentTypeProvider;
         }
 
-        [HttpGet("/api/files/{folderPath}")]
+        [HttpGet("/api/files/search?p={folderPath}")]
         public async Task<IActionResult> GetFiles(string folderPath, CancellationToken cancellationToken)
         {
             try
@@ -44,8 +44,8 @@ namespace Cryptomator.WebApi.Controllers
         {
             try
             {
-                var result = new List<FolderInfo>();
-                await foreach (var folder in _api.GetFolders(folderPath, cancellationToken).ConfigureAwait(false))
+                var result = new List<EntryInfo>();
+                await foreach (var folder in _api.GetDirectories(folderPath, cancellationToken).ConfigureAwait(false))
                 {
                     result.Add(folder);
                 }

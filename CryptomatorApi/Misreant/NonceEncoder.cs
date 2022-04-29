@@ -28,7 +28,7 @@ internal class NonceEncoder
         _nonce[NonceSize + 2] = (byte)((_counter >> 8) & 0xff);
         _nonce[NonceSize + 3] = (byte)(_counter & 0xff);
 
-        if (last) _nonce[_nonce.Length - 1] = 1;
+        if (last) _nonce[^1] = 1;
 
         try
         {

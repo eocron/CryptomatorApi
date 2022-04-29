@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Security.Cryptography;
 
 namespace CryptomatorApi.Misreant;
@@ -21,8 +20,6 @@ internal static class Utils
 
     public static void Multiply(byte[] input)
     {
-        Debug.Assert(input.Length == Constants.BlockSize);
-
         var carry = input[0] >> 7;
 
         for (var i = 0; i < Constants.BlockSize - 1; ++i) input[i] = (byte)((input[i] << 1) | (input[i + 1] >> 7));

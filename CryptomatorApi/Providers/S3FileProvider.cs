@@ -8,19 +8,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
-using CryptomatorApi.Core;
 
-namespace CryptomatorApi;
+namespace CryptomatorApi.Providers;
 
 public class S3FileProvider : IFileProvider
 {
     private readonly IAmazonS3 _api;
     private readonly string _bucketName;
+    private readonly bool _requestMetadata;
 
-    public S3FileProvider(IAmazonS3 api, string bucketName)
+    public S3FileProvider(IAmazonS3 api, string bucketName, bool requestMetadata = false)
     {
         _api = api;
         _bucketName = bucketName;
+        _requestMetadata = requestMetadata;
     }
 
     public async Task<bool> IsFileExistsAsync(string filePath, CancellationToken cancellationToken)
@@ -72,30 +73,18 @@ public class S3FileProvider : IFileProvider
         return response.S3Objects.Any();
     }
 
-    public async IAsyncEnumerable<string> GetDirectoriesAsync(string folderPath,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        await foreach (var info in GetFileSystemInfosAsync(folderPath, cancellationToken).ConfigureAwait(false))
-        {
-            var isDirectory = (info.Attributes & FileAttributes.Directory) != 0;
-            if (isDirectory)
-                yield return info.FullName;
-        }
-    }
-
-    public async IAsyncEnumerable<DirOfFileInfo> GetFileSystemInfosAsync(string folderPath,
+    public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(string folderPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         folderPath = AddRoot(folderPath);
-        // Build your request to list objects in the bucket
         var request = new ListObjectsV2Request
         {
             BucketName = _bucketName,
             Prefix = folderPath
         };
 
-        var result = new Dictionary<string, DirOfFileInfo>();
-        do
+        var result = new Dictionary<(string, bool), CryptomatorFileSystemInfo>();
+        while(true)
         {
             var response = await _api.ListObjectsV2Async(request, cancellationToken).ConfigureAwait(false);
 
@@ -114,34 +103,50 @@ public class S3FileProvider : IFileProvider
                     localPath = responseS3Object.Key;
                 }
 
-                if (!result.ContainsKey(localPath))
+                if (!result.ContainsKey((localPath, isFolder)))
                 {
-                    var info = new DirOfFileInfo(
-                        Path.GetFileName(localPath),
-                        RemoveRoot(localPath),
-                        isFolder ? FileAttributes.Directory : default);
-                    result.Add(localPath, info);
+                    CryptomatorFileSystemInfo tmp;
+                    if (isFolder)
+                    {
+                        tmp = new CryptomatorDirectoryInfo();
+                    }
+                    else
+                    {
+                        tmp = new CryptomatorFileInfo();
+                    }
+
+                    tmp.Name = Path.GetFileName(localPath);
+                    tmp.FullName = RemoveRoot(localPath);
+                    tmp.MetaData = new Dictionary<string, string>
+                    {
+                        { nameof(responseS3Object.ETag), responseS3Object.ETag },
+                        { nameof(responseS3Object.StorageClass), responseS3Object.StorageClass.Value }
+                    };
+
+                    if (_requestMetadata)
+                    {
+                        var responseMeta = await _api.GetObjectMetadataAsync(new GetObjectMetadataRequest
+                            {
+                                BucketName = _bucketName,
+                                Key = responseS3Object.Key,
+                            }, cancellationToken)
+                            .ConfigureAwait(false);
+                        foreach (var mkey in responseMeta.Metadata.Keys)
+                        {
+                            tmp.MetaData[mkey] = responseMeta.Metadata[mkey];
+                        }
+                    }
+                    result.Add((localPath,isFolder), tmp);
                 }
             }
 
             if (response.IsTruncated)
                 request.ContinuationToken = response.ContinuationToken;
             else
-                request = null;
-        } while (request != null);
+                break;
+        }
 
         foreach (var resultValue in result.Values) yield return resultValue;
-    }
-
-    public async IAsyncEnumerable<string> GetFilesAsync(string folderPath,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        await foreach (var info in GetFileSystemInfosAsync(folderPath, cancellationToken).ConfigureAwait(false))
-        {
-            var isDirectory = (info.Attributes & FileAttributes.Directory) != 0;
-            if (!isDirectory)
-                yield return info.FullName;
-        }
     }
 
     public async Task<Stream> OpenReadAsync(string filePath, CancellationToken cancellationToken)

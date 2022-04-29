@@ -192,7 +192,7 @@ public sealed class AesSiv : IDisposable
 
     private void ZeroIvBits(byte[] iv)
     {
-        iv[iv.Length - 8] &= 0x7f;
-        iv[iv.Length - 4] &= 0x7f;
+        iv[^8] &= 0x7f;
+        iv[^4] &= 0x7f;
     }
 }

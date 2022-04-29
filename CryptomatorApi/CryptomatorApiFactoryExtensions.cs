@@ -1,4 +1,6 @@
-﻿namespace CryptomatorApi;
+﻿using CryptomatorApi.Core;
+
+namespace CryptomatorApi;
 
 public static class CryptomatorApiFactoryExtensions
 {

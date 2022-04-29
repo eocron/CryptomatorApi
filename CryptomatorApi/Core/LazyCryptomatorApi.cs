@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CryptomatorApi;
+namespace CryptomatorApi.Core;
 
 internal sealed class LazyCryptomatorApi : ICryptomatorApi
 {
@@ -18,18 +18,24 @@ internal sealed class LazyCryptomatorApi : ICryptomatorApi
         _provider = apiProvider;
     }
 
-    public async IAsyncEnumerable<string> GetFiles(string virtualPath,
+    public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfos(string virtualPath, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await EnsureInitialized(cancellationToken).ConfigureAwait(false);
+        await foreach (var e in _inner.GetFileSystemInfos(virtualPath, cancellationToken).ConfigureAwait(false)) yield return e;
+    }
+
+    public async IAsyncEnumerable<CryptomatorFileInfo> GetFiles(string virtualPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await EnsureInitialized(cancellationToken).ConfigureAwait(false);
         await foreach (var e in _inner.GetFiles(virtualPath, cancellationToken).ConfigureAwait(false)) yield return e;
     }
 
-    public async IAsyncEnumerable<FolderInfo> GetFolders(string virtualPath,
+    public async IAsyncEnumerable<CryptomatorDirectoryInfo> GetDirectories(string virtualPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await EnsureInitialized(cancellationToken).ConfigureAwait(false);
-        await foreach (var e in _inner.GetFolders(virtualPath, cancellationToken).ConfigureAwait(false)) yield return e;
+        await foreach (var e in _inner.GetDirectories(virtualPath, cancellationToken).ConfigureAwait(false)) yield return e;
     }
 
     public async Task<Stream> OpenReadAsync(string virtualPath, CancellationToken cancellationToken)

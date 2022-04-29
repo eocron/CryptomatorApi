@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using CryptomatorApi.Core;
+using CryptomatorApi.Providers;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -58,9 +59,9 @@ namespace CryptomatorApi.Tests
                 var tmpFile = Path.GetTempFileName();
                 try
                 {
-                    await using var fileStream = await api.OpenReadAsync(file, ct).ConfigureAwait(false);
+                    await using var fileStream = await api.OpenReadAsync(file.FullName, ct).ConfigureAwait(false);
                     var actualHash = GetMd5Hash(fileStream);
-                    yield return new KeyValuePair<string, string>(file, actualHash);
+                    yield return new KeyValuePair<string, string>(file.FullName, actualHash);
                 }
                 finally
                 {
@@ -68,9 +69,9 @@ namespace CryptomatorApi.Tests
                 }
             }
 
-            await foreach (var folder in api.GetFolders(path, ct))
+            await foreach (var folder in api.GetDirectories(path, ct))
             {
-                await foreach (var file in GetAllFiles(api, folder.VirtualPath, ct))
+                await foreach (var file in GetAllFiles(api, folder.FullName, ct))
                 {
                     yield return file;
                 }

@@ -2,6 +2,7 @@
 using Amazon.S3;
 using CryptomatorApi;
 using CryptomatorApi.Core;
+using CryptomatorApi.Providers;
 using Microsoft.AspNetCore.StaticFiles;
 
 namespace Cryptomator.WebApi

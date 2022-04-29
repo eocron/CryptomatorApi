@@ -1,3 +1,5 @@
+namespace Cryptomator.WebApi;
+
 public class CryptomatorSettings
 {
     public string Password { get; set; }

@@ -3,13 +3,6 @@ using System.Linq;
 
 namespace CryptomatorApi.Core;
 
-public interface IPathHelper
-{
-    string Combine(params string[] parts);
-    string[] Split(string virtualPath);
-    bool Equals(string path1, string path2);
-}
-
 public sealed class PathHelper : IPathHelper
 {
     private readonly char _pathSeparatorChar;
