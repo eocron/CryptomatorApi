@@ -48,5 +48,40 @@
       ],
       "FolderPath": ""
     }
-  ] 
+  ],
+  "directorySearches": [
+    {
+      "Wildcard": "*1",
+      "SearchOption": "AllDirectories",
+      "ExpectedResult": [
+        "folder1"
+      ],
+      "FolderPath": ""
+    },
+    {
+      "Wildcard": "*",
+      "SearchOption": "AllDirectories",
+      "ExpectedResult": [
+        "folder1",
+        "folder2"
+      ],
+      "FolderPath": ""
+    }
+  ],
+  "allSearches": [
+    {
+      "Wildcard": "*",
+      "SearchOption": "AllDirectories",
+      "ExpectedResult": [
+        "small_file.txt",
+        "folder2",
+        "folder1",
+        "big_file.bin",
+        "folder1\\file11.txt",
+        "folder1\\file12.txt",
+        "folder2\\file21.txt"
+      ],
+      "FolderPath": ""
+    }
+  ]
 }

@@ -46,27 +46,29 @@ namespace CryptomatorApi.Tests
                 foreach (var stc in obj.AllSearches ?? Enumerable.Empty<TestSearchDto>())
                 {
                     yield return new TestCaseData(nameof(obj.AllSearches), obj.Password, folder, stc)
-                        .SetName(GetName(folder, stc));
+                        .SetName(GetName("All", folder, stc));
                 }
 
                 foreach (var stc in obj.DirectorySearches ?? Enumerable.Empty<TestSearchDto>())
                 {
                     yield return new TestCaseData(nameof(obj.DirectorySearches), obj.Password, folder, stc)
-                        .SetName(GetName(folder, stc));
+                        .SetName(GetName("Directory", folder, stc));
                 }
 
                 foreach (var stc in obj.FileSearches ?? Enumerable.Empty<TestSearchDto>())
                 {
                     yield return new TestCaseData(nameof(obj.FileSearches), obj.Password, folder, stc)
-                        .SetName(GetName(folder, stc));
+                        .SetName(GetName("File", folder, stc));
                 }
             }
         }
 
-        private static string GetName(string folder, TestSearchDto stc)
+        private static string GetName(string type, string folder, TestSearchDto stc)
         {
             var sb = new StringBuilder();
             sb.Append(Path.GetFileName(folder));
+            sb.Append(" ");
+            sb.Append(type);
             sb.Append(" search for '");
             sb.Append(stc.FolderPath);
             if (stc.SearchOption == SearchOption.AllDirectories)
@@ -87,7 +89,6 @@ namespace CryptomatorApi.Tests
             var ct = CancellationToken.None;
             var actualHashes = new Dictionary<string, string>();
             var api = _apiFactory.Create(testCase.Password, folder);
-
             await foreach (var (file, hash) in GetFileAndHashes(api, null, ct))
             {
                 actualHashes.Add(file, hash);
@@ -128,7 +129,7 @@ namespace CryptomatorApi.Tests
                 default: throw new ArgumentException(type);
             }
 
-            testCase.ExpectedResult.Should().BeEquivalentTo(tmp);
+            tmp.Should().BeEquivalentTo(testCase.ExpectedResult);
         }
 
         private async IAsyncEnumerable<(string, string)> GetFileAndHashes(ICryptomatorApi api, string path, [EnumeratorCancellation] CancellationToken ct)
