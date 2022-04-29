@@ -36,7 +36,7 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
             vaultConfig = await LoadVaultConfig(vaultConfigPath, false, null, cancellationToken).ConfigureAwait(false);
             var kidParts = vaultConfig.VcH.Kid.Split(':');
             if (kidParts.Length != 2 || kidParts[0] != "masterkeyfile")
-                throw new Exception($"vault config id parameter unsupported : {vaultConfig.VcH.Kid}");
+                throw new NotSupportedException($"vault config id parameter unsupported : {vaultConfig.VcH.Kid}");
             masterKeyPath = _pathHelper.Combine(vaultPath, kidParts[1]);
         }
         else
@@ -78,14 +78,14 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
             //version must come from vault.cryptomator.  If v8, can handle as if version 7 
             //because there are no structural changes.
             if (vaultConfig == null)
-                throw new Exception("Missing required vault configuration");
+                throw new FileNotFoundException("Missing required vault configuration (vault.cryptomator)");
             if (vaultConfig.VcD.Format == 8)
                 return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
-            throw new Exception(
+            throw new NotSupportedException(
                 $"Only format 8 vaults are currently support. Vault format is {vaultConfig.VcD.Format}");
         }
 
-        throw new ArgumentException($"Vault version {mkey.Version} is unsupported");
+        throw new NotSupportedException($"Vault version {mkey.Version} is unsupported");
     }
 
 
