@@ -27,7 +27,7 @@ namespace Cryptomator.WebApi.Controllers
                 var result = new List<string>();
                 await foreach (var file in _api.GetFiles(folderPath, cancellationToken).ConfigureAwait(false))
                 {
-                    result.Add(file);
+                    result.Add(file.FullName);
                 }
 
                 return Ok(result);
@@ -44,7 +44,7 @@ namespace Cryptomator.WebApi.Controllers
         {
             try
             {
-                var result = new List<EntryInfo>();
+                var result = new List<CryptomatorDirectoryInfo>();
                 await foreach (var folder in _api.GetDirectories(folderPath, cancellationToken).ConfigureAwait(false))
                 {
                     result.Add(folder);

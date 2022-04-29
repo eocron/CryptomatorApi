@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +24,8 @@ public sealed class SimpleFileProvider : IFileProvider
         return File.ReadAllLinesAsync(filePath, cancellationToken);
     }
 
-    public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(string folderPath,
+    public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(
+        string folderPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var all = new DirectoryInfo(folderPath).EnumerateFileSystemInfos();
@@ -58,10 +58,5 @@ public sealed class SimpleFileProvider : IFileProvider
     public Task<Stream> OpenReadAsync(string encryptedFilePath, CancellationToken cancellationToken)
     {
         return Task.FromResult((Stream)new FileStream(encryptedFilePath, FileMode.Open));
-    }
-
-    public Task<bool> HasFilesAsync(string folderPath, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(new DirectoryInfo(folderPath).EnumerateFileSystemInfos().Any());
     }
 }

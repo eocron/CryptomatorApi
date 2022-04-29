@@ -52,6 +52,8 @@ internal abstract class CryptomatorApiBase : ICryptomatorApi
 
     protected List<string> GetDirHierarchy(string virtualPath)
     {
+        if (string.IsNullOrEmpty(virtualPath))
+            return new List<string>();
         return _pathHelper.Split(virtualPath).ToList();
     }
 
@@ -77,8 +79,6 @@ internal abstract class CryptomatorApiBase : ICryptomatorApi
                 {
                     FullName = PathJoin(parentDir.VirtualPath, newDirInfo.Name),
                     Name = newDirInfo.Name,
-                    HasChildren = await _fileProvider.HasFilesAsync(newDirInfo.PhysicalPath, cancellationToken)
-                        .ConfigureAwait(false),
                     MetaData = file.MetaData
                 };
             }
@@ -128,8 +128,6 @@ internal abstract class CryptomatorApiBase : ICryptomatorApi
             {
                 FullName = PathJoin(parentDir.VirtualPath, newDirInfo.Name),
                 Name = newDirInfo.Name,
-                HasChildren = await _fileProvider.HasFilesAsync(newDirInfo.PhysicalPath, cancellationToken)
-                    .ConfigureAwait(false),
                 MetaData = dir.MetaData
             };
         }

@@ -6,5 +6,47 @@
     "folder2\\file21.txt": "3527c9196a1a71586f62561ac47c0041",
     "folder1\\file11.txt": "ff540c3a74632840e7def2b7b7862c00",
     "folder1\\file12.txt": "052286e0be2a237ea15d08005cb01d84"
-  }
+  },
+  "fileSearches": [
+    {
+      "Wildcard": "*.txt",
+      "SearchOption": "AllDirectories",
+      "ExpectedResult": [
+        "folder2\\file21.txt",
+        "folder1\\file11.txt",
+        "folder1\\file12.txt",
+        "small_file.txt"
+      ],
+      "FolderPath": ""
+    },
+    {
+      "Wildcard": "*",
+      "SearchOption": "AllDirectories",
+      "ExpectedResult": [
+        "small_file.txt",
+        "big_file.bin",
+        "folder1\\file11.txt",
+        "folder1\\file12.txt",
+        "folder2\\file21.txt"
+      ],
+      "FolderPath": ""
+    },
+    {
+      "Wildcard": "*.txt",
+      "SearchOption": "AllDirectories",
+      "ExpectedResult": [
+        "folder1\\file11.txt",
+        "folder1\\file12.txt"
+      ],
+      "FolderPath": "folder1"
+    },
+    {
+      "Wildcard": "*.txt",
+      "SearchOption": "TopDirectoryOnly",
+      "ExpectedResult": [
+        "small_file.txt"
+      ],
+      "FolderPath": ""
+    }
+  ] 
 }

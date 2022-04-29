@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -58,19 +57,6 @@ public class S3FileProvider : IFileProvider
     {
         var tmp = await ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
         return tmp.Split(Environment.NewLine);
-    }
-
-    public async Task<bool> HasFilesAsync(string folderPath, CancellationToken cancellationToken)
-    {
-        folderPath = AddRoot(folderPath);
-        var request = new ListObjectsV2Request
-        {
-            BucketName = _bucketName,
-            Prefix = folderPath,
-            MaxKeys = 1
-        };
-        var response = await _api.ListObjectsV2Async(request, cancellationToken).ConfigureAwait(false);
-        return response.S3Objects.Any();
     }
 
     public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(string folderPath,
