@@ -90,7 +90,7 @@ internal sealed class FileDecryptStream : Stream
 
     private byte[] ReadBlock()
     {
-        var chunk = _buffer;
+        var chunk = new FixedSpan(_buffer);
         int tmpRead;
         TryReadExactly(_inner, chunk, 0, chunk.Length, out tmpRead);
         if (tmpRead == 0)
@@ -103,11 +103,11 @@ internal sealed class FileDecryptStream : Stream
             Array.Reverse(beBlockNum);
 
         _header.ChunkHmac.Initialize();
-        _header.ChunkHmac.Update(_header.HeaderNonce);
-        _header.ChunkHmac.Update(beBlockNum);
+        _header.ChunkHmac.Update(new FixedSpan(_header.HeaderNonce));
+        _header.ChunkHmac.Update(new FixedSpan(beBlockNum));
         _header.ChunkHmac.Update(chunkHeader.Nonce);
         _header.ChunkHmac.DoFinal(chunkHeader.Payload);
-        if (!Equals(_header.ChunkHmac.Hash, chunkHeader.Mac))
+        if (!HashEquals(_header.ChunkHmac.Hash, chunkHeader.Mac))
             throw new IOException("Encrypted file fails integrity check.");
 
         var result = AesCtr(chunkHeader.Payload, _header.ContentKey, chunkHeader.Nonce);
@@ -115,16 +115,7 @@ internal sealed class FileDecryptStream : Stream
         return result;
     }
 
-    /// <summary>
-    /// Due to how some streams works we need to read exact blocks.
-    /// </summary>
-    /// <param name="stream"></param>
-    /// <param name="buffer"></param>
-    /// <param name="offset"></param>
-    /// <param name="count"></param>
-    /// <param name="totalRead"></param>
-    /// <returns></returns>
-    private static bool TryReadExactly(Stream stream, byte[] buffer, int offset, int count, out int totalRead)
+    private static bool TryReadExactly(Stream stream, FixedSpan buffer, int offset, int count, out int totalRead)
     {
         totalRead = 0;
         int read;
@@ -141,8 +132,8 @@ internal sealed class FileDecryptStream : Stream
     private Header ReadHeader()
     {
         const int headerSize = 16 + 40 + 32;
-        var chunk = _buffer;
-        if (_inner.Read(chunk, 0, headerSize) != headerSize)
+        var chunk = new FixedSpan(_buffer, 0, headerSize);
+        if (_inner.Read(chunk) != headerSize)
             throw new IOException("Invalid file header.");
 
         var chunkHeader = new HeaderRaw(chunk, 0, headerSize);
@@ -150,16 +141,16 @@ internal sealed class FileDecryptStream : Stream
         var headerHmac = new Hmac(_keys.MacKey);
         headerHmac.Update(chunkHeader.Nonce);
         headerHmac.DoFinal(chunkHeader.Payload);
-        if (!Equals(headerHmac.Hash, chunkHeader.Mac))
+        if (!HashEquals(headerHmac.Hash, chunkHeader.Mac))
             throw new IOException("Encrypted file fails integrity check.");
 
         var cleartextPayload = AesCtr(chunkHeader.Payload, _keys.MasterKey, chunkHeader.Nonce);
-        var contentKey = Slice(cleartextPayload, 8, 32);
+        var contentKey = new FixedSpan(cleartextPayload, 8, 32);
 
         return new Header(contentKey, new Hmac(_keys.MacKey), chunkHeader.Nonce);
     }
 
-    private static bool Equals(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)
+    private static bool HashEquals(byte[] a1, FixedSpan a2)
     {
         if (a1.Length != a2.Length) return false;
 
@@ -170,32 +161,27 @@ internal sealed class FileDecryptStream : Stream
         return true;
     }
 
-    private static ReadOnlySpan<byte> Slice(byte[] input, int offset, int length)
-    {
-        return input.AsSpan(offset, length);
-    }
-
-    private static byte[] AesCtr(ReadOnlySpan<byte> input, byte[] key, ReadOnlySpan<byte> ivSpan)
+    private static byte[] AesCtr(FixedSpan input, byte[] key, FixedSpan ivSpan)
     {
         var iv = ivSpan.ToArray(); //use a copy to avoid updating original IV.
 
         //Since we're always decrypting an in-memory chunk we don't bother with streams
         using var aesAlg = new Aes128CounterModeSymmetricAlgorithm(iv);
         var decryptor = aesAlg.CreateDecryptor(key, iv);
-        return decryptor.TransformFinalBlock(input.ToArray(), 0, input.Length);
+        return decryptor.TransformFinalBlock(input);
     }
 
     private ref struct HeaderRaw
     {
-        public readonly ReadOnlySpan<byte> Nonce;
-        public readonly ReadOnlySpan<byte> Payload;
-        public readonly ReadOnlySpan<byte> Mac;
+        public readonly FixedSpan Nonce;
+        public readonly FixedSpan Payload;
+        public readonly FixedSpan Mac;
 
-        public HeaderRaw(byte[] buffer, int offset, int length)
+        public HeaderRaw(FixedSpan buffer, int offset, int length)
         {
-            Nonce = Slice(buffer, offset, 16);
-            Payload = Slice(buffer, offset + Nonce.Length, length - 48);
-            Mac = Slice(buffer, offset + Nonce.Length + Payload.Length, 32);
+            Nonce = buffer.Slice(offset, 16);
+            Payload = buffer.Slice(offset + Nonce.Length, length - 48);
+            Mac = buffer.Slice(offset + Nonce.Length + Payload.Length, 32);
         }
     }
 
@@ -205,7 +191,7 @@ internal sealed class FileDecryptStream : Stream
         public readonly byte[] ContentKey;
         public readonly byte[] HeaderNonce;
 
-        public Header(ReadOnlySpan<byte> contentKey, Hmac chunkHmac, ReadOnlySpan<byte> headerNonce)
+        public Header(FixedSpan contentKey, Hmac chunkHmac, FixedSpan headerNonce)
         {
             ContentKey = contentKey.ToArray();
             ChunkHmac = chunkHmac;
@@ -219,14 +205,14 @@ internal sealed class FileDecryptStream : Stream
         {
         }
 
-        public void Update(ReadOnlySpan<byte> input)
+        public void Update(FixedSpan input)
         {
-            TransformBlock(input.ToArray(), 0, input.Length, null, 0);
+            this.TransformBlock(input);
         }
 
-        public void DoFinal(ReadOnlySpan<byte> input)
+        public void DoFinal(FixedSpan input)
         {
-            TransformFinalBlock(input.ToArray(), 0, input.Length);
+            this.TransformFinalBlock(input);
         }
     }
 }

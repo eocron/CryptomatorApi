@@ -27,7 +27,7 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
 
     public async Task<ICryptomatorApi> Unlock(string password, string vaultPath, CancellationToken cancellationToken)
     {
-        var masterKeyPath = "";
+        string masterKeyPath;
         VaultConfig vaultConfig = null;
 
         var vaultConfigPath = _pathHelper.Combine(vaultPath, "vault.cryptomator");
@@ -100,7 +100,7 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
         }
         catch (Exception ex)
         {
-            throw new Exception("Cannot load vault configuration", ex);
+            throw new ArgumentException("Cannot load vault configuration", ex);
         }
     }
 

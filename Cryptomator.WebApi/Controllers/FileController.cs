@@ -19,13 +19,17 @@ namespace Cryptomator.WebApi.Controllers
             _contentTypeProvider = contentTypeProvider;
         }
 
-        [HttpGet("/api/files/search?p={folderPath}")]
-        public async Task<IActionResult> GetFiles(string folderPath, CancellationToken cancellationToken)
+        [HttpGet("/api/files/search")]
+        public async Task<IActionResult> GetFiles(
+            [FromQuery(Name = "p")]string folderPath, 
+            [FromQuery(Name = "sp")]string searchPattern, 
+            [FromQuery(Name = "so")]SearchOption searchOption,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var result = new List<string>();
-                await foreach (var file in _api.GetFiles(folderPath, cancellationToken).ConfigureAwait(false))
+                await foreach (var file in _api.GetFiles(folderPath, searchPattern, searchOption, cancellationToken).ConfigureAwait(false))
                 {
                     result.Add(file.FullName);
                 }
@@ -39,13 +43,17 @@ namespace Cryptomator.WebApi.Controllers
             }
         }
 
-        [HttpGet("/api/folders/{folderPath}")]
-        public async Task<IActionResult> GetFolders(string folderPath, CancellationToken cancellationToken)
+        [HttpGet("/api/dirs/search")]
+        public async Task<IActionResult> GetDirectories(
+            [FromQuery(Name = "p")] string folderPath,
+            [FromQuery(Name = "sp")] string searchPattern,
+            [FromQuery(Name = "so")] SearchOption searchOption,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var result = new List<CryptomatorDirectoryInfo>();
-                await foreach (var folder in _api.GetDirectories(folderPath, cancellationToken).ConfigureAwait(false))
+                await foreach (var folder in _api.GetDirectories(folderPath, searchPattern, searchOption, cancellationToken).ConfigureAwait(false))
                 {
                     result.Add(folder);
                 }
@@ -59,7 +67,7 @@ namespace Cryptomator.WebApi.Controllers
             }
         }
 
-        [HttpGet("/api/files/{filePath}/view")]
+        [HttpGet("/api/files/{filePath}")]
         public async Task<IActionResult> GetFile(string filePath, CancellationToken cancellationToken)
         {
             filePath = Uri.UnescapeDataString(filePath);
