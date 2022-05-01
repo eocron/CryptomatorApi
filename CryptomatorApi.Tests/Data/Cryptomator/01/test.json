@@ -1,12 +1,14 @@
 ﻿{
   "password": "testtest",
-  "hashes": {
-    "small_file.txt": "052286e0be2a237ea15d08005cb01d84",
-    "big_file.bin": "50576fb5bddee8f2526099be4bdd479f",
-    "folder2\\file21.txt": "3527c9196a1a71586f62561ac47c0041",
-    "folder1\\file11.txt": "ff540c3a74632840e7def2b7b7862c00",
-    "folder1\\file12.txt": "052286e0be2a237ea15d08005cb01d84"
-  },
+  "checks": [
+    "small_file.txt 052286e0be2a237ea15d08005cb01d84 80",
+    "big_file.bin 50576fb5bddee8f2526099be4bdd479f 5129951",
+    "folder2\\file21.txt 3527c9196a1a71586f62561ac47c0041 38",
+    "folder1\\file11.txt ff540c3a74632840e7def2b7b7862c00 50",
+    "folder1\\file12.txt 052286e0be2a237ea15d08005cb01d84 80",
+    "exact2.bin 4c399fd265dd9847bbf8c46e70af71a2 32816",
+    "exact1.bin bb7df04e1b0a2570657527a7e108ae23 32768"
+  ],
   "fileSearches": [
     {
       "Wildcard": "*.txt",
@@ -23,6 +25,8 @@
       "Wildcard": "*",
       "SearchOption": "AllDirectories",
       "ExpectedResult": [
+        "exact2.bin",
+        "exact1.bin",
         "small_file.txt",
         "big_file.bin",
         "folder1\\file11.txt",
@@ -73,6 +77,8 @@
       "Wildcard": "*",
       "SearchOption": "AllDirectories",
       "ExpectedResult": [
+        "exact2.bin",
+        "exact1.bin",
         "small_file.txt",
         "folder2",
         "folder1",

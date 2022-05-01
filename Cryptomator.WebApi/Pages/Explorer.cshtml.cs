@@ -36,6 +36,11 @@ namespace Cryptomator.WebApi.Pages
 
         public List<ExplorerItemInfo> Files { get; set; }
         public string Type { get; set; }
+
+
+        /// <summary>
+        /// https://stackoverflow.com/questions/14946421/why-do-webkit-browsers-need-to-download-the-entire-html5-video-mp4-before-play
+        /// </summary>
         public string VideoLink { get; set; }
 
         public async Task OnGet(CancellationToken cancellationToken)

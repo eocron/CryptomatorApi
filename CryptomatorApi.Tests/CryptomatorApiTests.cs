@@ -87,14 +87,13 @@ namespace CryptomatorApi.Tests
         public async Task CheckContent(TestDto testCase, string folder)
         {
             var ct = CancellationToken.None;
-            var actualHashes = new Dictionary<string, string>();
+            var actualHashes = new List<string>();
             var api = _apiFactory.Create(testCase.Password, folder);
-            await foreach (var (file, hash) in GetFileAndHashes(api, null, ct))
+            await foreach (var (file, hash, size) in GetFileAndHashes(api, null, ct))
             {
-                actualHashes.Add(file, hash);
+                actualHashes.Add($"{file} {hash} {size}");
             }
-
-            actualHashes.Should().BeEquivalentTo(testCase.Hashes);
+            actualHashes.Should().BeEquivalentTo(testCase.Checks);
         }
 
 
@@ -132,7 +131,7 @@ namespace CryptomatorApi.Tests
             tmp.Should().BeEquivalentTo(testCase.ExpectedResult);
         }
 
-        private async IAsyncEnumerable<(string, string)> GetFileAndHashes(ICryptomatorApi api, string path, [EnumeratorCancellation] CancellationToken ct)
+        private async IAsyncEnumerable<(string, string, long)> GetFileAndHashes(ICryptomatorApi api, string path, [EnumeratorCancellation] CancellationToken ct)
         {
 
             await foreach (var file in api.GetFiles(path, ct))
@@ -141,8 +140,9 @@ namespace CryptomatorApi.Tests
                 try
                 {
                     await using var fileStream = await api.OpenReadAsync(file.FullName, ct).ConfigureAwait(false);
+                    var length = fileStream.Length;
                     var actualHash = await GetMd5Hash(fileStream, ct).ConfigureAwait(false);
-                    yield return (file.FullName, actualHash);
+                    yield return (file.FullName, actualHash, length);
                 }
                 finally
                 {
@@ -170,7 +170,7 @@ namespace CryptomatorApi.Tests
         {
             public string Password { get; set; }
 
-            public Dictionary<string, string> Hashes { get; set; }
+            public List<string> Checks { get; set; }
 
             public List<TestSearchDto> DirectorySearches { get; set; }
 

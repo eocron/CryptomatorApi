@@ -7,9 +7,18 @@ using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core;
 
+public class FileDecryptState
+{
+
+}
 internal sealed class FileDecryptStream : Stream
 {
-    private readonly byte[] _buffer = new byte[32768 + 48];
+    private const int EncryptionMetaSize = 48;
+    private const int EncryptedBlockSize = UnencryptedBlockSize + EncryptionMetaSize;
+    private const int UnencryptedBlockSize = 32768;
+    private const int HeaderSize = 16 + 40 + 32;
+
+    private readonly byte[] _buffer = new byte[EncryptedBlockSize];
     private readonly Stream _inner;
     private readonly Keys _keys;
     private int _blockNum;
@@ -27,7 +36,18 @@ internal sealed class FileDecryptStream : Stream
     public override bool CanRead => true;
     public override bool CanSeek => false;
     public override bool CanWrite => false;
-    public override long Length => throw new NotSupportedException();
+    public override long Length{
+        get
+        {
+            var lengthWithoutHeader = _inner.Length - HeaderSize;
+            var encryptedTailSize = lengthWithoutHeader % EncryptedBlockSize;
+            var blockCount = lengthWithoutHeader / EncryptedBlockSize;
+
+            var result = blockCount * UnencryptedBlockSize +
+                         (encryptedTailSize == 0 ? 0 : (encryptedTailSize - EncryptionMetaSize));
+            return result;
+        }
+    }
 
     public override long Position
     {
@@ -138,12 +158,11 @@ internal sealed class FileDecryptStream : Stream
 
     private async Task<Header> ReadHeader(CancellationToken cancellationToken)
     {
-        const int headerSize = 16 + 40 + 32;
-        var chunk = new FixedSpan(_buffer, 0, headerSize);
-        if (await _inner.ReadAsync(chunk, cancellationToken).ConfigureAwait(false) != headerSize)
+        var chunk = new FixedSpan(_buffer, 0, HeaderSize);
+        if (await _inner.ReadAsync(chunk, cancellationToken).ConfigureAwait(false) != HeaderSize)
             throw new IOException("Invalid file header.");
 
-        var chunkHeader = new HeaderRaw(chunk, 0, headerSize);
+        var chunkHeader = new HeaderRaw(chunk, 0, HeaderSize);
 
         var headerHmac = new Hmac(_keys.MacKey);
         headerHmac.Update(chunkHeader.Nonce);

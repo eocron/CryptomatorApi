@@ -31,6 +31,12 @@
     <None Update="Data\Cryptomator\01\d\G6\3F2JVV4KMAXCJX25CHHLPAPILNDYV4\KtyDVw0HiUjRtmUwIC5b1zrYY-M9dtrE5tk=.c9r">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\6fkENmhjiOhEfLuQIGhtXaRdfGI1XigFIM8=.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\A9iZgmjStPP4WPVytUMhq1wd_AodExSdct8=.c9r">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Data\Cryptomator\01\d\IX\4UZD4PSR2JA3XZMTTBTY4RQYLB6YFO\H-st_A9MSp4Ejt5QwHpDkrb7SOKbVT22ES-78QlE.c9r">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
