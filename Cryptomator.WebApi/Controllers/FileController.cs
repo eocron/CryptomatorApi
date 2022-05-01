@@ -22,14 +22,12 @@ namespace Cryptomator.WebApi.Controllers
         [HttpGet("/api/files/search")]
         public async Task<IActionResult> GetFiles(
             [FromQuery(Name = "p")]string folderPath, 
-            [FromQuery(Name = "sp")]string searchPattern, 
-            [FromQuery(Name = "so")]SearchOption searchOption,
             CancellationToken cancellationToken)
         {
             try
             {
                 var result = new List<string>();
-                await foreach (var file in _api.GetFiles(folderPath, searchPattern, searchOption, cancellationToken).ConfigureAwait(false))
+                await foreach (var file in _api.GetFiles(folderPath, cancellationToken: cancellationToken).ConfigureAwait(false))
                 {
                     result.Add(file.FullName);
                 }
@@ -38,7 +36,7 @@ namespace Cryptomator.WebApi.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to serve folder: {0}", folderPath);
+                _logger.LogError(e, "Failed to serve folder: {0}", "");
                 return BadRequest();
             }
         }

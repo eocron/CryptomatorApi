@@ -11,6 +11,7 @@ namespace Cryptomator.WebApi
     {
         public static void Configure(IServiceCollection services)
         {
+            services.AddRazorPages();
             services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             services.AddEndpointsApiExplorer();

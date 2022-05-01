@@ -1,0 +1,36 @@
+﻿@page
+@model Cryptomator.WebApi.Pages.ExplorerModel
+@{
+    ViewData["Title"] = "Cryptomator explorer";
+}
+
+@{
+    if (Model.VideoLink != null)
+    {
+        <video width="640" height="480" autoplay="autoplay">
+            <source src="@Model.VideoLink" type="@Model.Type">
+            Your browser does not support the video tag.
+        </video>
+    }
+
+    <table>
+        <tbody>
+        @{
+            foreach (var f in Model.Directories)
+            {
+                <tr>
+                    <td><img src="icons/folder.png"/></td>
+                    <td><a href="@f.Link">@f.Name</a></td>
+                </tr>
+            }
+            foreach (var f in Model.Files)
+            {
+                <tr>
+                    <td><img src="icons/file.png"/></td>
+                    <td><a href="@f.Link">@f.Name</a></td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+}
