@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CryptomatorApi.Core
 {
@@ -18,14 +20,14 @@ namespace CryptomatorApi.Core
             return transform.TransformFinalBlock(inputBuffer.Data, inputBuffer.Offset, inputBuffer.Length);
         }
 
-        public static int Read(this Stream stream, FixedSpan buffer)
+        public static Task<int> ReadAsync(this Stream stream, FixedSpan buffer, CancellationToken cancellationToken)
         {
-            return stream.Read(buffer.Data, buffer.Offset, buffer.Length);
+            return stream.ReadAsync(buffer.Data, buffer.Offset, buffer.Length, cancellationToken);
         }
 
-        public static int Read(this Stream stream, FixedSpan buffer, int offset, int count)
+        public static Task<int> ReadAsync(this Stream stream, FixedSpan buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return stream.Read(buffer.Data, buffer.Offset + offset, Math.Min(buffer.Length, count));
+            return stream.ReadAsync(buffer.Data, buffer.Offset + offset, Math.Min(buffer.Length, count), cancellationToken);
         }
     }
 }

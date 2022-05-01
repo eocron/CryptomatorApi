@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core;
@@ -40,10 +42,16 @@ internal sealed class FileDecryptStream : Stream
 
     public override int Read(byte[] buffer, int offset, int count)
     {
+        return ReadAsync(buffer, offset, count, CancellationToken.None).Result;
+    }
+
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         if (_header == null)
         {
-            _header = ReadHeader();
-            _current = ReadBlock();
+            _header = await ReadHeader(cancellationToken).ConfigureAwait(false);
+            _current = await ReadBlock(cancellationToken).ConfigureAwait(false);
             _currentPos = 0;
         }
 
@@ -55,7 +63,7 @@ internal sealed class FileDecryptStream : Stream
             if (_currentPos == _current.Length)
             {
                 _currentPos = 0;
-                _current = ReadBlock();
+                _current = await ReadBlock(cancellationToken).ConfigureAwait(false);
                 if (_current == null)
                     return i;
             }
@@ -88,11 +96,10 @@ internal sealed class FileDecryptStream : Stream
         base.Close();
     }
 
-    private byte[] ReadBlock()
+    private async Task<byte[]> ReadBlock(CancellationToken cancellationToken)
     {
         var chunk = new FixedSpan(_buffer);
-        int tmpRead;
-        TryReadExactly(_inner, chunk, 0, chunk.Length, out tmpRead);
+        int tmpRead = await ReadExactly(_inner, chunk, 0, chunk.Length, cancellationToken).ConfigureAwait(false);
         if (tmpRead == 0)
             return null;
 
@@ -115,25 +122,25 @@ internal sealed class FileDecryptStream : Stream
         return result;
     }
 
-    private static bool TryReadExactly(Stream stream, FixedSpan buffer, int offset, int count, out int totalRead)
+    private static async Task<int> ReadExactly(Stream stream, FixedSpan buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        totalRead = 0;
+        var totalRead = 0;
         int read;
-        while (count > 0 && (read = stream.Read(buffer, offset, count)) > 0)
+        while (count > 0 && (read = await stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false)) > 0)
         {
             count -= read;
             offset += read;
             totalRead += read;
         }
 
-        return count == 0;
+        return totalRead;
     }
 
-    private Header ReadHeader()
+    private async Task<Header> ReadHeader(CancellationToken cancellationToken)
     {
         const int headerSize = 16 + 40 + 32;
         var chunk = new FixedSpan(_buffer, 0, headerSize);
-        if (_inner.Read(chunk) != headerSize)
+        if (await _inner.ReadAsync(chunk, cancellationToken).ConfigureAwait(false) != headerSize)
             throw new IOException("Invalid file header.");
 
         var chunkHeader = new HeaderRaw(chunk, 0, headerSize);
@@ -171,7 +178,7 @@ internal sealed class FileDecryptStream : Stream
         return decryptor.TransformFinalBlock(input);
     }
 
-    private ref struct HeaderRaw
+    private struct HeaderRaw
     {
         public readonly FixedSpan Nonce;
         public readonly FixedSpan Payload;

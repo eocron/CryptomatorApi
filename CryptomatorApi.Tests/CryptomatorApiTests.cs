@@ -141,7 +141,7 @@ namespace CryptomatorApi.Tests
                 try
                 {
                     await using var fileStream = await api.OpenReadAsync(file.FullName, ct).ConfigureAwait(false);
-                    var actualHash = GetMd5Hash(fileStream);
+                    var actualHash = await GetMd5Hash(fileStream, ct).ConfigureAwait(false);
                     yield return (file.FullName, actualHash);
                 }
                 finally
@@ -159,10 +159,10 @@ namespace CryptomatorApi.Tests
             }
         }
 
-        private string GetMd5Hash(Stream stream)
+        private async Task<string> GetMd5Hash(Stream stream, CancellationToken cancellationToken)
         {
             using var md5 = MD5.Create();
-            var hash = md5.ComputeHash(stream);
+            var hash = await md5.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
             return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
         }
 
