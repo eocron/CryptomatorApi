@@ -17,7 +17,6 @@ public class S3FileProvider : IFileProvider
     private readonly string _bucketName;
     private readonly bool _requestMetadata;
     private readonly char _separator = '/';
-    private readonly string _separatorStr = "/";
 
     public S3FileProvider(IAmazonS3 api, string bucketName, bool requestMetadata = false)
     {
