@@ -16,6 +16,8 @@ public class S3FileProvider : IFileProvider
     private readonly IAmazonS3 _api;
     private readonly string _bucketName;
     private readonly bool _requestMetadata;
+    private readonly char _separator = '/';
+    private readonly string _separatorStr = "/";
 
     public S3FileProvider(IAmazonS3 api, string bucketName, bool requestMetadata = false)
     {
@@ -53,7 +55,8 @@ public class S3FileProvider : IFileProvider
         var request = new ListObjectsV2Request
         {
             BucketName = _bucketName,
-            Prefix = folderPath
+            Prefix = folderPath,
+            Delimiter = _separatorStr,
         };
 
         var result = new Dictionary<(string, bool), CryptomatorFileSystemInfo>();
@@ -65,7 +68,7 @@ public class S3FileProvider : IFileProvider
             {
                 string localPath;
                 var isFolder = IsFolder(responseS3Object);
-                var index = responseS3Object.Key.IndexOf('/', folderPath.Length + 1);
+                var index = responseS3Object.Key.IndexOf(_separator, folderPath.Length + 1);
                 if (index != -1)
                 {
                     localPath = responseS3Object.Key.Substring(0, index);
@@ -101,7 +104,7 @@ public class S3FileProvider : IFileProvider
                         var responseMeta = await _api.GetObjectMetadataAsync(new GetObjectMetadataRequest
                             {
                                 BucketName = _bucketName,
-                                Key = responseS3Object.Key,
+                                Key = responseS3Object.Key
                             }, cancellationToken)
                             .ConfigureAwait(false);
                         foreach (var mkey in responseMeta.Metadata.Keys)
@@ -125,22 +128,22 @@ public class S3FileProvider : IFileProvider
     public async Task<Stream> OpenReadAsync(string filePath, CancellationToken cancellationToken)
     {
         filePath = AddRoot(filePath);
-        var response = await SeekableS3Stream.OpenFileAsync(_api, _bucketName, filePath, true);
+        var response = await SeekableS3Stream.OpenFileAsync(_api, _bucketName, filePath);
         return response;
     }
 
-    private static string AddRoot(string path)
+    private string AddRoot(string path)
     {
-        return path.Trim('/');
+        return path.Trim(_separator);
     }
 
-    private static string RemoveRoot(string path)
+    private string RemoveRoot(string path)
     {
-        return path.TrimStart('/');
+        return path.TrimStart(_separator);
     }
 
-    private static bool IsFolder(S3Object x)
+    private bool IsFolder(S3Object x)
     {
-        return x.Key.EndsWith(@"/") && x.Size == 0;
+        return x.Key.EndsWith(_separator) && x.Size == 0;
     }
 }

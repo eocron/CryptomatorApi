@@ -10,7 +10,6 @@ namespace CryptomatorApi.Core.S3
     internal sealed class SeekableS3Stream : AsyncStream
     {
         private readonly IAmazonS3 _s3Client;
-        private readonly bool _leaveOpen;
         private readonly string _bucketName;
         private readonly string _keyName;
 
@@ -30,9 +29,9 @@ namespace CryptomatorApi.Core.S3
 
         public long SeekCount { get; private set; }
 
-        public static Task<Stream> OpenFileAsync(IAmazonS3 s3Client, string bucketName, string keyName, bool leaveClientOpen)
+        public static Task<Stream> OpenFileAsync(IAmazonS3 s3Client, string bucketName, string keyName)
         {
-            var seekableStream = new SeekableS3Stream(s3Client, bucketName, keyName, leaveClientOpen);
+            var seekableStream = new SeekableS3Stream(s3Client, bucketName, keyName);
             try
             {
                 return seekableStream.OpenFileStreamAsync();
@@ -44,10 +43,9 @@ namespace CryptomatorApi.Core.S3
             }
         }
 
-        private SeekableS3Stream(IAmazonS3 s3Client, string bucketName, string keyName, bool leaveOpen)
+        private SeekableS3Stream(IAmazonS3 s3Client, string bucketName, string keyName)
         {
             _s3Client = s3Client;
-            _leaveOpen = leaveOpen;
             _bucketName = bucketName;
             _keyName = keyName;
         }
@@ -124,6 +122,18 @@ namespace CryptomatorApi.Core.S3
             return newStreamPos;
         }
 
+        public override void Close()
+        {
+            try
+            {
+                _latestGetObjectResponse?.Dispose();
+            }
+            catch{}
+
+            _latestGetObjectResponse = null;
+            base.Close();
+        }
+
         public override void SetLength(long value)
         {
             throw new NotSupportedException();
@@ -132,28 +142,6 @@ namespace CryptomatorApi.Core.S3
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                try
-                {
-                    if (_latestGetObjectResponse != null)
-                        _latestGetObjectResponse.Dispose();
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    if (!_leaveOpen && _s3Client != null)
-                        _s3Client.Dispose();
-                }
-                catch (Exception) { }
-            }
-
-            base.Dispose(disposing);
         }
     }
 }
