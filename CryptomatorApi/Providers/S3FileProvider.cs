@@ -46,20 +46,6 @@ public class S3FileProvider : IFileProvider
         }
     }
 
-    public async Task<string> ReadAllTextAsync(string filePath, CancellationToken cancellationToken)
-    {
-        filePath = AddRoot(filePath);
-        await using var response = await _api.GetObjectStreamAsync(_bucketName, filePath, null, cancellationToken).ConfigureAwait(false);
-        using var sr = new StreamReader(response);
-        return await sr.ReadToEndAsync().ConfigureAwait(false);
-    }
-
-    public async Task<string[]> ReadAllLinesAsync(string filePath, CancellationToken cancellationToken)
-    {
-        var tmp = await ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
-        return tmp.Split(Environment.NewLine);
-    }
-
     public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(string folderPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -143,17 +129,17 @@ public class S3FileProvider : IFileProvider
         return response;
     }
 
-    private string AddRoot(string path)
+    private static string AddRoot(string path)
     {
         return path.Trim('/');
     }
 
-    private string RemoveRoot(string path)
+    private static string RemoveRoot(string path)
     {
         return path.TrimStart('/');
     }
 
-    private bool IsFolder(S3Object x)
+    private static bool IsFolder(S3Object x)
     {
         return x.Key.EndsWith(@"/") && x.Size == 0;
     }

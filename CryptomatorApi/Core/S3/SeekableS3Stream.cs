@@ -64,18 +64,6 @@ namespace CryptomatorApi.Core.S3
             return this;
         }
 
-        private async Task<Stream> OpenFileStream(CancellationToken cancellationToken)
-        {
-            GetObjectRequest request = new GetObjectRequest
-            {
-                BucketName = _bucketName,
-                Key = _keyName
-            };
-            _latestGetObjectResponse = await _s3Client.GetObjectAsync(request, cancellationToken).ConfigureAwait(false);
-            _fullFileSize = _latestGetObjectResponse.ContentLength;
-            return this;
-        }
-
         public override void Flush()
         {
             _latestGetObjectResponse.ResponseStream.Flush();
@@ -123,14 +111,13 @@ namespace CryptomatorApi.Core.S3
 
             _latestGetObjectResponse?.Dispose();
 
-            GetObjectRequest request = new GetObjectRequest
+            var request = new GetObjectRequest
             {
                 BucketName = _bucketName,
                 Key = _keyName,
                 ByteRange = new ByteRange(newStreamPos, Length)
             };
 
-            //No way to do an async Seek unfortunately
             _latestGetObjectResponse = await _s3Client.GetObjectAsync(request, cancellationToken).ConfigureAwait(false);
 
             _position = newStreamPos;
