@@ -7,7 +7,7 @@ using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core;
 
-internal sealed class FileDecryptStream : Stream
+internal sealed class DecryptStream : Stream
 {
     private const int EncryptionMetaSize = 48;
     private const int EncryptedBlockSize = UnencryptedBlockSize + EncryptionMetaSize;
@@ -23,7 +23,7 @@ internal sealed class FileDecryptStream : Stream
     private Header _header;
     private long _pos;
 
-    public FileDecryptStream(Stream inner, Keys keys)
+    public DecryptStream(Stream inner, Keys keys)
     {
         _keys = keys;
         _inner = inner;
@@ -48,7 +48,15 @@ internal sealed class FileDecryptStream : Stream
     public override long Position
     {
         get => _pos;
-        set => throw new NotSupportedException();
+        set
+        {
+            if (CanSeek)
+                Seek(value, SeekOrigin.Begin);
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
     }
 
     public override void Flush()
@@ -67,19 +75,15 @@ internal sealed class FileDecryptStream : Stream
         if (_header == null)
         {
             _header = await ReadHeader(cancellationToken).ConfigureAwait(false);
-            _current = await ReadBlock(cancellationToken).ConfigureAwait(false);
-            _currentPos = 0;
         }
-
-        if (_current == null)
-            return 0;
 
         for (var i = 0; i < count; i++)
         {
-            if (_currentPos >= _current.Length)
+            if (_current == null || _currentPos >= _current.Length)
             {
-                _currentPos = 0;
                 _current = await ReadBlock(cancellationToken).ConfigureAwait(false);
+                _currentPos = 0;
+
                 if (_current == null)
                     return i;
             }
@@ -98,6 +102,8 @@ internal sealed class FileDecryptStream : Stream
 
     private async Task<long> SeekAsync(long offset, SeekOrigin origin, CancellationToken cancellationToken)
     {
+        if (!CanSeek)
+            throw new NotSupportedException();
         if (origin != SeekOrigin.Begin)
             throw new NotSupportedException();
 
@@ -122,12 +128,12 @@ internal sealed class FileDecryptStream : Stream
 
     public override void SetLength(long value)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override void Close()
@@ -213,7 +219,7 @@ internal sealed class FileDecryptStream : Stream
 
         //Since we're always decrypting an in-memory chunk we don't bother with streams
         using var aesAlg = new Aes128CounterModeSymmetricAlgorithm(iv);
-        var decryptor = aesAlg.CreateDecryptor(key, iv);
+        using var decryptor = aesAlg.CreateDecryptor(key, iv);
         return decryptor.TransformFinalBlock(input);
     }
 

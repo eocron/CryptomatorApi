@@ -138,7 +138,7 @@ internal abstract class CryptomatorApiBase : ICryptomatorApi
         var encryptedFilePath = await GetFilePhysicalPath(virtualPath, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrEmpty(encryptedFilePath))
             throw new FileNotFoundException("Unable to locate encrypted file");
-        return new FileDecryptStream(
+        return new DecryptStream(
             await _fileProvider.OpenReadAsync(encryptedFilePath, cancellationToken).ConfigureAwait(false), _keys);
     }
 
