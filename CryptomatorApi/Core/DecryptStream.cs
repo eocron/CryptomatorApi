@@ -7,7 +7,7 @@ using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core;
 
-internal sealed class DecryptStream : Stream
+internal sealed class DecryptStream : AsyncStream
 {
     private const int EncryptionMetaSize = 48;
     private const int EncryptedBlockSize = UnencryptedBlockSize + EncryptionMetaSize;
@@ -100,18 +100,13 @@ internal sealed class DecryptStream : Stream
         return count;
     }
 
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        return SeekAsync(offset, origin, CancellationToken.None).GetAwaiter().GetResult();
-    }
-
     private void CheckOffset(long offset)
     {
         if (offset < 0)
             throw new IOException("The parameter is incorrect.");
     }
 
-    private async Task<long> SeekAsync(long offset, SeekOrigin origin, CancellationToken cancellationToken)
+    public override async Task<long> SeekAsync(long offset, SeekOrigin origin, CancellationToken cancellationToken)
     {
         if (!CanSeek)
             throw new NotSupportedException();

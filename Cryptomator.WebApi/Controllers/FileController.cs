@@ -76,7 +76,8 @@ namespace Cryptomator.WebApi.Controllers
                     contentType = "application/octet-stream";
 
                 var fileStream = await _api.OpenReadAsync(filePath, cancellationToken).ConfigureAwait(false);
-                return File(fileStream, contentType, Path.GetFileName(filePath));
+
+                return File(fileStream, contentType, Path.GetFileName(filePath), true);
             }
             catch (FileNotFoundException fnfex)
             {

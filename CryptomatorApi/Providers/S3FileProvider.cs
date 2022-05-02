@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
+using CryptomatorApi.Core.S3;
 
 namespace CryptomatorApi.Providers;
 
@@ -138,8 +139,7 @@ public class S3FileProvider : IFileProvider
     public async Task<Stream> OpenReadAsync(string filePath, CancellationToken cancellationToken)
     {
         filePath = AddRoot(filePath);
-        var response = await _api.GetObjectStreamAsync(_bucketName, filePath, null, cancellationToken)
-            .ConfigureAwait(false);
+        var response = await SeekableS3Stream.OpenFileAsync(_api, _bucketName, filePath, true);
         return response;
     }
 

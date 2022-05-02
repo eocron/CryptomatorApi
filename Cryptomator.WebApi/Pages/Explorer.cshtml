@@ -7,7 +7,7 @@
 @{
     if (Model.VideoLink != null)
     {
-        <video width="640" height="480" autoplay="autoplay">
+        <video width="640" height="480" controls>
             <source src="@Model.VideoLink" type="@Model.Type">
             Your browser does not support the video tag.
         </video>
