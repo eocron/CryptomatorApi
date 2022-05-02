@@ -43,7 +43,12 @@ namespace CryptomatorApi.Tests
 
         public static IEnumerable<TestCaseData> GetSeekTests()
         {
-            var seekOrigins = new[] { SeekOrigin.Begin };
+            var seekOrigins = new[]
+            {
+                SeekOrigin.Begin, 
+                SeekOrigin.Current,
+                SeekOrigin.End
+            };
             var offsets = new[]
             {
                 0,
@@ -73,7 +78,7 @@ namespace CryptomatorApi.Tests
                 {
                     foreach (var bufferSize in bufferSizes)
                     {
-                        yield return new TestCaseData(seekOrigin, offset, bufferSize);
+                        yield return new TestCaseData(seekOrigin, (seekOrigin == SeekOrigin.End) ? -offset : offset, bufferSize);
                     }
                 }
             }
@@ -137,8 +142,37 @@ namespace CryptomatorApi.Tests
             await using var actualStream = await api.OpenReadAsync(encryptedVirtualPath, ct).ConfigureAwait(false);
             await using var expectedStream = File.OpenRead(originalFilePath);
 
-            actualStream.Seek(offset, origin);
-            expectedStream.Seek(offset, origin);
+            Exception actualEx = null;
+            Exception expectedEx = null;
+            try
+            {
+                actualStream.Seek(offset, origin);
+            }
+            catch(Exception ex)
+            {
+                actualEx = ex;
+            }
+            try
+            {
+                expectedStream.Seek(offset, origin);
+            }
+            catch (Exception ex)
+            {
+                expectedEx = ex;
+            }
+
+            if (expectedEx != null)
+            {
+                Assert.AreEqual(expectedEx?.GetType(), actualEx?.GetType());
+                return;
+            }
+            
+            if (origin == SeekOrigin.Current)
+            {
+                actualStream.Seek(offset, origin);
+                expectedStream.Seek(offset, origin);
+            }
+
             var actual = await GetMd5Hash(actualStream, bufferSize, ct).ConfigureAwait(false);
             var expected = await GetMd5Hash(expectedStream, ct).ConfigureAwait(false);
             CollectionAssert.AreEqual(expected, actual);

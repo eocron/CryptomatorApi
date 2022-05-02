@@ -102,15 +102,30 @@ internal sealed class DecryptStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        return SeekAsync(offset, origin, CancellationToken.None).Result;
+        return SeekAsync(offset, origin, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    private void CheckOffset(long offset)
+    {
+        if (offset < 0)
+            throw new IOException("The parameter is incorrect.");
     }
 
     private async Task<long> SeekAsync(long offset, SeekOrigin origin, CancellationToken cancellationToken)
     {
         if (!CanSeek)
             throw new NotSupportedException();
-        if (origin != SeekOrigin.Begin)
-            throw new NotSupportedException();
+        if (origin == SeekOrigin.Current)
+        {
+            offset = _pos + offset;
+            origin = SeekOrigin.Begin;
+        }
+        else if (origin == SeekOrigin.End)
+        {
+            offset = Length + offset;
+            origin = SeekOrigin.Begin;
+        }
+        CheckOffset(offset);
 
         if (_header == null)
         {
