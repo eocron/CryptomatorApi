@@ -17,7 +17,7 @@ namespace CryptomatorApi.Tests
 {
     public class CryptomatorApiTests
     {
-        private CryptomatorApiFactory _apiFactory;
+        private ICryptomatorApiFactory _apiFactory;
 
         [SetUp]
         public void Setup()
@@ -108,17 +108,9 @@ namespace CryptomatorApi.Tests
 
             actualStream.Seek(offset, SeekOrigin.Begin);
             expectedStream.Seek(offset, SeekOrigin.Begin);
-            var actual = await ReadToEnd(actualStream, ct).ConfigureAwait(false);
-            var expected = await ReadToEnd(expectedStream, ct).ConfigureAwait(false);
+            var actual = await GetMd5Hash(actualStream, ct).ConfigureAwait(false);
+            var expected = await GetMd5Hash(expectedStream, ct).ConfigureAwait(false);
             CollectionAssert.AreEqual(expected, actual);
-        }
-
-        private async Task<byte[]> ReadToEnd(Stream stream, CancellationToken ct)
-        {
-            var ms = new MemoryStream();
-            await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
-            Console.WriteLine(ms.Length);
-            return ms.ToArray();
         }
 
         [Test]
