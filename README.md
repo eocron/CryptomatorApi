@@ -1,4 +1,10 @@
-CryptomatorApi
+#CryptomatorApi
 
-Based on https://github.com/lellis1936/CryptomatorAccessDemo
-Just simplified api to use it with S3/FileSystem/other file providers.
+Reworked version of https://github.com/lellis1936/CryptomatorAccessDemo
+
+Features:
+
+ - Simplified readonly interface.
+ - IoC compliant.
+ - Seekable streaming supported.
+ - S3 provider supported.
