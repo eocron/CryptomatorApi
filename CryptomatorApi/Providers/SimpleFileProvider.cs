@@ -14,16 +14,6 @@ public sealed class SimpleFileProvider : IFileProvider
         return Task.FromResult(File.Exists(filePath));
     }
 
-    public Task<string> ReadAllTextAsync(string filePath, CancellationToken cancellationToken)
-    {
-        return File.ReadAllTextAsync(filePath, cancellationToken);
-    }
-
-    public Task<string[]> ReadAllLinesAsync(string filePath, CancellationToken cancellationToken)
-    {
-        return File.ReadAllLinesAsync(filePath, cancellationToken);
-    }
-
     public async IAsyncEnumerable<CryptomatorFileSystemInfo> GetFileSystemInfosAsync(
         string folderPath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
