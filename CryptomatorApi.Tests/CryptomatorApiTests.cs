@@ -308,22 +308,16 @@ namespace CryptomatorApi.Tests
         public class TestDto
         {
             public string Password { get; set; }
-
             public List<string> Checks { get; set; }
-
             public List<TestSearchDto> DirectorySearches { get; set; }
-
             public List<TestSearchDto> FileSearches { get; set; }
-
             public List<TestSearchDto> AllSearches { get; set; }
         }
 
         public class TestSearchDto
         {
             public string Wildcard { get; set; }
-
             public SearchOption SearchOption { get; set; }
-
             public List<string> ExpectedResult { get; set; }
             public string FolderPath { get; set; }
         }
