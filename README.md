@@ -1,8 +1,8 @@
-#CryptomatorApi
+# CryptomatorApi
 
 Reworked version of https://github.com/lellis1936/CryptomatorAccessDemo
 
-Features:
+## Features
 
  - Simplified readonly interface.
  - IoC compliant.
