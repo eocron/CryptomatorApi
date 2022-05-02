@@ -55,8 +55,7 @@ public class S3FileProvider : IFileProvider
         var request = new ListObjectsV2Request
         {
             BucketName = _bucketName,
-            Prefix = folderPath,
-            Delimiter = _separatorStr,
+            Prefix = folderPath
         };
 
         var result = new Dictionary<(string, bool), CryptomatorFileSystemInfo>();

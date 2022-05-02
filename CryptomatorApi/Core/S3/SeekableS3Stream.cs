@@ -52,7 +52,7 @@ namespace CryptomatorApi.Core.S3
 
         private async Task<Stream> OpenFileStreamAsync()
         {
-            GetObjectRequest request = new GetObjectRequest
+            var request = new GetObjectRequest
             {
                 BucketName = _bucketName,
                 Key = _keyName

@@ -1,7 +1,6 @@
 using CryptomatorApi;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Net.Http.Headers;
 
 namespace Cryptomator.WebApi.Controllers
 {

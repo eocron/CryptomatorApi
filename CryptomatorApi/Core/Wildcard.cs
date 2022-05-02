@@ -11,7 +11,7 @@ namespace CryptomatorApi.Core
 
         private static string WildcardPatternToRegex(string wildcardPattern)
         {
-            string patternWithWildcards = "^" + Escape(wildcardPattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+            var patternWithWildcards = "^" + Escape(wildcardPattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
             return patternWithWildcards;
         }
     }

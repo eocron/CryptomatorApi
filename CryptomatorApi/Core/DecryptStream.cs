@@ -78,7 +78,7 @@ internal sealed class DecryptStream : AsyncStream
             _header = await ReadHeader(cancellationToken).ConfigureAwait(false);
         }
 
-        int i = 0;
+        var i = 0;
         while (i < count)
         {
             if (_current == null || _currentPos >= _current.Length)
@@ -160,7 +160,7 @@ internal sealed class DecryptStream : AsyncStream
     private async Task<byte[]> ReadBlock(CancellationToken cancellationToken)
     {
         var chunk = new FixedSpan(_buffer);
-        int tmpRead = await ReadExactly(_inner, chunk, 0, chunk.Length, cancellationToken).ConfigureAwait(false);
+        var tmpRead = await ReadExactly(_inner, chunk, 0, chunk.Length, cancellationToken).ConfigureAwait(false);
         if (tmpRead == 0)
             return null;
 

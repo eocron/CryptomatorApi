@@ -43,14 +43,23 @@ namespace Cryptomator.WebApi.Pages
         /// </summary>
         public string VideoLink { get; set; }
 
+        public string ImageLink { get; set; }
+
         public async Task OnGet(CancellationToken cancellationToken)
         {
             if (!string.IsNullOrWhiteSpace(FilePath))
             {
                 if (!_contentTypeProvider.TryGetContentType(FilePath, out var contentType))
                     contentType = "application/octet-stream";
-                VideoLink = "/api/files/" + Uri.EscapeDataString(FilePath);
                 Type = contentType;
+                if (contentType.Contains("video"))
+                {
+                    VideoLink = "/api/files/" + Uri.EscapeDataString(FilePath);
+                }
+                else if(contentType.Contains("image"))
+                {
+                    ImageLink = "/api/files/" + Uri.EscapeDataString(FilePath);
+                }
             }
 
             Directories = new List<ExplorerItemInfo>();
