@@ -37,7 +37,7 @@ namespace Cryptomator.WebApi
             {
                 var cfg = x.GetRequiredService<CryptomatorSettings>();
                 if (cfg.S3 == null)
-                    return new PathHelper(Path.DirectorySeparatorChar);
+                    return new PathHelper();
                 return new PathHelper('/');
             });
             services.AddSingleton<ICryptomatorApiFactory, CryptomatorApiFactory>();

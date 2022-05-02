@@ -33,7 +33,7 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
         var vaultConfigPath = _pathHelper.Combine(vaultPath, "vault.cryptomator");
         if (await _fileProvider.IsFileExistsAsync(vaultConfigPath, cancellationToken).ConfigureAwait(false))
         {
-            vaultConfig = await LoadVaultConfig(vaultConfigPath, false, null, cancellationToken).ConfigureAwait(false);
+            vaultConfig = await ReadVaultConfig(vaultConfigPath, false, null, cancellationToken).ConfigureAwait(false);
             var kidParts = vaultConfig.VcH.Kid.Split(':');
             if (kidParts.Length != 2 || kidParts[0] != "masterkeyfile")
                 throw new NotSupportedException($"vault config id parameter unsupported : {vaultConfig.VcH.Kid}");
@@ -47,6 +47,38 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
         if (!await _fileProvider.IsFileExistsAsync(masterKeyPath, cancellationToken).ConfigureAwait(false))
             throw new FileNotFoundException("Missing master key file (masterkey.cryptomator)");
 
+        var keys = await ReadKeys(masterKeyPath, password, cancellationToken).ConfigureAwait(false);
+
+
+        //Validate vault config if present
+        if (vaultConfig != null)
+        {
+            //Reload the vault config, this time verifying the signature
+            var jwtKey = keys.MasterKey.Concat(keys.MacKey).ToArray();
+            vaultConfig = await ReadVaultConfig(vaultConfigPath, true, jwtKey, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (keys.Version == 6) return new V6CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
+
+        if (keys.Version == 7) return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
+
+        if (keys.Version == 999)
+        {
+            //version must come from vault.cryptomator.  If v8, can handle as if version 7 
+            //because there are no structural changes.
+            if (vaultConfig == null)
+                throw new FileNotFoundException("Missing required vault configuration (vault.cryptomator)");
+            if (vaultConfig.VcD.Format == 8)
+                return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
+            throw new NotSupportedException(
+                $"Only format 8 vaults are currently support. Vault format is {vaultConfig.VcD.Format}");
+        }
+
+        throw new NotSupportedException($"Vault version {keys.Version} is unsupported");
+    }
+
+    private async Task<Keys> ReadKeys(string masterKeyPath, string password, CancellationToken cancellationToken)
+    {
         var jsonString = await _fileProvider.ReadAllTextAsync(masterKeyPath, cancellationToken).ConfigureAwait(false);
         var mkey = JsonConvert.DeserializeObject<MasterKey>(jsonString);
 
@@ -62,34 +94,12 @@ public sealed class CryptomatorApiFactory : ICryptomatorApiFactory
         keys.MasterKey = rfc.Unwrap(kek, abPrimaryMasterKey);
         keys.MacKey = rfc.Unwrap(kek, abHmacMasterKey);
         keys.SivKey = keys.MacKey.Concat(keys.MasterKey).ToArray();
-        var jwtKey = keys.MasterKey.Concat(keys.MacKey).ToArray();
-
-        //Validate vault config if present
-        if (vaultConfig != null)
-            //Reload the vault config, this time verifying the signature
-            vaultConfig = await LoadVaultConfig(vaultConfigPath, true, jwtKey, cancellationToken).ConfigureAwait(false);
-
-        if (mkey.Version == 6) return new V6CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
-
-        if (mkey.Version == 7) return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
-
-        if (mkey.Version == 999)
-        {
-            //version must come from vault.cryptomator.  If v8, can handle as if version 7 
-            //because there are no structural changes.
-            if (vaultConfig == null)
-                throw new FileNotFoundException("Missing required vault configuration (vault.cryptomator)");
-            if (vaultConfig.VcD.Format == 8)
-                return new V7CryptomatorApi(keys, vaultPath, _fileProvider, _pathHelper);
-            throw new NotSupportedException(
-                $"Only format 8 vaults are currently support. Vault format is {vaultConfig.VcD.Format}");
-        }
-
-        throw new NotSupportedException($"Vault version {mkey.Version} is unsupported");
+        keys.Version = mkey.Version;
+        return keys;
     }
 
 
-    private async Task<VaultConfig> LoadVaultConfig(string vaultConfigPath, bool verify, byte[] key,
+    private async Task<VaultConfig> ReadVaultConfig(string vaultConfigPath, bool verify, byte[] key,
         CancellationToken cancellationToken)
     {
         try

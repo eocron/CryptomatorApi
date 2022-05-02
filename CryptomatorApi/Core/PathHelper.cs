@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 
 namespace CryptomatorApi.Core;
@@ -7,9 +8,9 @@ public sealed class PathHelper : IPathHelper
 {
     private readonly char _pathSeparatorChar;
 
-    public PathHelper(char pathSeparator)
+    public PathHelper(char? pathSeparator = null)
     {
-        _pathSeparatorChar = pathSeparator;
+        _pathSeparatorChar = pathSeparator ?? Path.DirectorySeparatorChar;
     }
 
     public bool Equals(string path1, string path2)

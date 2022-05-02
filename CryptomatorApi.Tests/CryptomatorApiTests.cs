@@ -22,7 +22,7 @@ namespace CryptomatorApi.Tests
         [SetUp]
         public void Setup()
         {
-            _apiFactory = new CryptomatorApiFactory(new SimpleFileProvider(), new PathHelper(Path.DirectorySeparatorChar));
+            _apiFactory = new CryptomatorApiFactory(new SimpleFileProvider(), new PathHelper());
         }
 
         public static IEnumerable<TestCaseData> GetTests()
@@ -32,7 +32,11 @@ namespace CryptomatorApi.Tests
             {
                 var test = File.ReadAllText(Path.Combine(folder, "test.json"));
                 var obj = JsonConvert.DeserializeObject<TestDto>(test);
-                yield return new TestCaseData(obj, folder)
+                var originalsFolder = Path.Combine(folder, "originals");
+                var hashes = GetFileAndHashes(originalsFolder, CancellationToken.None);
+                obj.Checks = hashes.Select(x => $"{x.Item1.Substring(originalsFolder.Length + 1)} {x.Item2} {x.Item3}").ToList();
+                var vaultPath = Path.Combine(folder, "encrypted");
+                yield return new TestCaseData(obj, vaultPath, originalsFolder)
                     .SetName(Path.GetFileName(folder));
             }
         }
@@ -83,12 +87,47 @@ namespace CryptomatorApi.Tests
         }
 
         [Test]
+        [TestCase(1)]
+        [TestCase(32768/2)]
+        [TestCase(32768)]
+        [TestCase(32768 + 48)]
+        [TestCase((32768 + 48) / 2)]
+        [TestCase(5129950)]
+        [TestCase(5129951)]
+        [TestCase(5129952)]
+        [TestCase(0)]
+        public async Task Seek(int offset)
+        {
+            var ct = CancellationToken.None;
+            var api = _apiFactory.Create("testtest", "Data/Cryptomator/01/encrypted");
+            var originalFilePath = "Data/Cryptomator/01/originals/big_file.bin";
+            var encryptedVirtualPath = "big_file.bin";
+
+            await using var actualStream = await api.OpenReadAsync(encryptedVirtualPath, ct).ConfigureAwait(false);
+            await using var expectedStream = File.OpenRead(originalFilePath);
+
+            actualStream.Seek(offset, SeekOrigin.Begin);
+            expectedStream.Seek(offset, SeekOrigin.Begin);
+            var actual = await ReadToEnd(actualStream, ct).ConfigureAwait(false);
+            var expected = await ReadToEnd(expectedStream, ct).ConfigureAwait(false);
+            CollectionAssert.AreEqual(expected, actual);
+        }
+
+        private async Task<byte[]> ReadToEnd(Stream stream, CancellationToken ct)
+        {
+            var ms = new MemoryStream();
+            await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
+            Console.WriteLine(ms.Length);
+            return ms.ToArray();
+        }
+
+        [Test]
         [TestCaseSource(nameof(GetTests))]
-        public async Task CheckContent(TestDto testCase, string folder)
+        public async Task CheckContent(TestDto testCase, string vaulePath, string originalsPath)
         {
             var ct = CancellationToken.None;
             var actualHashes = new List<string>();
-            var api = _apiFactory.Create(testCase.Password, folder);
+            var api = _apiFactory.Create(testCase.Password, vaulePath);
             await foreach (var (file, hash, size) in GetFileAndHashes(api, null, ct))
             {
                 actualHashes.Add($"{file} {hash} {size}");
@@ -131,7 +170,34 @@ namespace CryptomatorApi.Tests
             tmp.Should().BeEquivalentTo(testCase.ExpectedResult);
         }
 
-        private async IAsyncEnumerable<(string, string, long)> GetFileAndHashes(ICryptomatorApi api, string path, [EnumeratorCancellation] CancellationToken ct)
+        private static IEnumerable<(string, string, long)> GetFileAndHashes(string folder, CancellationToken ct)
+        {
+            foreach (var file in Directory.GetFiles(folder))
+            {
+                var tmpFile = Path.GetTempFileName();
+                try
+                {
+                    using var fileStream = File.OpenRead(file);
+                    var length = fileStream.Length;
+                    var actualHash = GetMd5Hash(fileStream, ct).Result;
+                    yield return (file, actualHash, length);
+                }
+                finally
+                {
+                    File.Delete(tmpFile);
+                }
+            }
+
+            foreach (var f in Directory.GetDirectories(folder))
+            {
+                foreach (var file in GetFileAndHashes(f, ct))
+                {
+                    yield return file;
+                }
+            }
+        }
+
+        private static async IAsyncEnumerable<(string, string, long)> GetFileAndHashes(ICryptomatorApi api, string path, [EnumeratorCancellation] CancellationToken ct)
         {
 
             await foreach (var file in api.GetFiles(path, ct))
@@ -159,7 +225,7 @@ namespace CryptomatorApi.Tests
             }
         }
 
-        private async Task<string> GetMd5Hash(Stream stream, CancellationToken cancellationToken)
+        private static async Task<string> GetMd5Hash(Stream stream, CancellationToken cancellationToken)
         {
             using var md5 = MD5.Create();
             var hash = await md5.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);

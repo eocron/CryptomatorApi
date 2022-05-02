@@ -7,10 +7,6 @@ using CryptomatorApi.Core.Contract;
 
 namespace CryptomatorApi.Core;
 
-public class FileDecryptState
-{
-
-}
 internal sealed class FileDecryptStream : Stream
 {
     private const int EncryptionMetaSize = 48;
@@ -21,7 +17,7 @@ internal sealed class FileDecryptStream : Stream
     private readonly byte[] _buffer = new byte[EncryptedBlockSize];
     private readonly Stream _inner;
     private readonly Keys _keys;
-    private int _blockNum;
+    private long _blockNum;
     private byte[] _current;
     private int _currentPos;
     private Header _header;
@@ -33,8 +29,8 @@ internal sealed class FileDecryptStream : Stream
         _inner = inner;
     }
 
-    public override bool CanRead => true;
-    public override bool CanSeek => false;
+    public override bool CanRead => _inner.CanRead;
+    public override bool CanSeek => _inner.CanSeek;
     public override bool CanWrite => false;
     public override long Length{
         get
@@ -80,7 +76,7 @@ internal sealed class FileDecryptStream : Stream
 
         for (var i = 0; i < count; i++)
         {
-            if (_currentPos == _current.Length)
+            if (_currentPos >= _current.Length)
             {
                 _currentPos = 0;
                 _current = await ReadBlock(cancellationToken).ConfigureAwait(false);
@@ -97,7 +93,31 @@ internal sealed class FileDecryptStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        throw new NotImplementedException();
+        return SeekAsync(offset, origin, CancellationToken.None).Result;
+    }
+
+    private async Task<long> SeekAsync(long offset, SeekOrigin origin, CancellationToken cancellationToken)
+    {
+        if (origin != SeekOrigin.Begin)
+            throw new NotSupportedException();
+
+        if (_header == null)
+        {
+            _inner.Seek(0, SeekOrigin.Begin);
+            _header = await ReadHeader(cancellationToken).ConfigureAwait(false);
+        }
+
+        var blockTailSize = offset % UnencryptedBlockSize;
+        var blockCount = offset / UnencryptedBlockSize;
+
+
+        var encryptedFullBlockOffset = HeaderSize + blockCount * EncryptedBlockSize;
+        _inner.Seek(encryptedFullBlockOffset, origin);
+        _blockNum = blockCount;
+        _current = await ReadBlock(cancellationToken).ConfigureAwait(false);
+        _currentPos = (int)blockTailSize;
+        _pos = offset;
+        return _pos;
     }
 
     public override void SetLength(long value)
@@ -123,21 +143,21 @@ internal sealed class FileDecryptStream : Stream
         if (tmpRead == 0)
             return null;
 
-        var chunkHeader = new HeaderRaw(chunk, 0, tmpRead);
+        var block = new Block(chunk, 0, tmpRead);
 
-        var beBlockNum = BitConverter.GetBytes((long)_blockNum);
+        var beBlockNum = BitConverter.GetBytes(_blockNum);
         if (BitConverter.IsLittleEndian)
             Array.Reverse(beBlockNum);
 
         _header.ChunkHmac.Initialize();
         _header.ChunkHmac.Update(new FixedSpan(_header.HeaderNonce));
         _header.ChunkHmac.Update(new FixedSpan(beBlockNum));
-        _header.ChunkHmac.Update(chunkHeader.Nonce);
-        _header.ChunkHmac.DoFinal(chunkHeader.Payload);
-        if (!HashEquals(_header.ChunkHmac.Hash, chunkHeader.Mac))
+        _header.ChunkHmac.Update(block.Nonce);
+        _header.ChunkHmac.DoFinal(block.Payload);
+        if (!HashEquals(_header.ChunkHmac.Hash, block.Mac))
             throw new IOException("Encrypted file fails integrity check.");
 
-        var result = AesCtr(chunkHeader.Payload, _header.ContentKey, chunkHeader.Nonce);
+        var result = AesCtr(block.Payload, _header.ContentKey, block.Nonce);
         _blockNum++;
         return result;
     }
@@ -162,18 +182,18 @@ internal sealed class FileDecryptStream : Stream
         if (await _inner.ReadAsync(chunk, cancellationToken).ConfigureAwait(false) != HeaderSize)
             throw new IOException("Invalid file header.");
 
-        var chunkHeader = new HeaderRaw(chunk, 0, HeaderSize);
+        var block = new Block(chunk, 0, HeaderSize);
 
         var headerHmac = new Hmac(_keys.MacKey);
-        headerHmac.Update(chunkHeader.Nonce);
-        headerHmac.DoFinal(chunkHeader.Payload);
-        if (!HashEquals(headerHmac.Hash, chunkHeader.Mac))
+        headerHmac.Update(block.Nonce);
+        headerHmac.DoFinal(block.Payload);
+        if (!HashEquals(headerHmac.Hash, block.Mac))
             throw new IOException("Encrypted file fails integrity check.");
 
-        var cleartextPayload = AesCtr(chunkHeader.Payload, _keys.MasterKey, chunkHeader.Nonce);
+        var cleartextPayload = AesCtr(block.Payload, _keys.MasterKey, block.Nonce);
         var contentKey = new FixedSpan(cleartextPayload, 8, 32);
 
-        return new Header(contentKey, new Hmac(_keys.MacKey), chunkHeader.Nonce);
+        return new Header(contentKey, headerHmac, block.Nonce);
     }
 
     private static bool HashEquals(byte[] a1, FixedSpan a2)
@@ -197,13 +217,13 @@ internal sealed class FileDecryptStream : Stream
         return decryptor.TransformFinalBlock(input);
     }
 
-    private struct HeaderRaw
+    private struct Block
     {
         public readonly FixedSpan Nonce;
         public readonly FixedSpan Payload;
         public readonly FixedSpan Mac;
 
-        public HeaderRaw(FixedSpan buffer, int offset, int length)
+        public Block(FixedSpan buffer, int offset, int length)
         {
             Nonce = buffer.Slice(offset, 16);
             Payload = buffer.Slice(offset + Nonce.Length, length - 48);
