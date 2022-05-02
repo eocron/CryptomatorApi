@@ -32,7 +32,8 @@ internal sealed class DecryptStream : Stream
     public override bool CanRead => _inner.CanRead;
     public override bool CanSeek => _inner.CanSeek;
     public override bool CanWrite => false;
-    public override long Length{
+    public override long Length
+    {
         get
         {
             var lengthWithoutHeader = _inner.Length - HeaderSize;
@@ -77,7 +78,8 @@ internal sealed class DecryptStream : Stream
             _header = await ReadHeader(cancellationToken).ConfigureAwait(false);
         }
 
-        for (var i = 0; i < count; i++)
+        int i = 0;
+        while (i < count)
         {
             if (_current == null || _currentPos >= _current.Length)
             {
@@ -88,8 +90,11 @@ internal sealed class DecryptStream : Stream
                     return i;
             }
 
-            buffer[i] = _current[_currentPos++];
-            _pos++;
+            var toCopy = Math.Min(buffer.Length - i, _current.Length - _currentPos);
+            Array.Copy(_current, _currentPos, buffer, i, toCopy);
+            _pos += toCopy;
+            i += toCopy;
+            _currentPos += toCopy;
         }
 
         return count;
@@ -223,7 +228,7 @@ internal sealed class DecryptStream : Stream
         return decryptor.TransformFinalBlock(input);
     }
 
-    private struct Block
+    private readonly struct Block
     {
         public readonly FixedSpan Nonce;
         public readonly FixedSpan Payload;
@@ -237,7 +242,7 @@ internal sealed class DecryptStream : Stream
         }
     }
 
-    private class Header
+    private sealed class Header
     {
         public readonly Hmac ChunkHmac;
         public readonly byte[] ContentKey;
