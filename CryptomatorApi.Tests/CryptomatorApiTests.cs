@@ -41,6 +41,44 @@ namespace CryptomatorApi.Tests
             }
         }
 
+        public static IEnumerable<TestCaseData> GetSeekTests()
+        {
+            var seekOrigins = new[] { SeekOrigin.Begin };
+            var offsets = new[]
+            {
+                0,
+                1,
+                32768,
+                5129951 - 1,
+                5129951,
+                5129951 + 1,
+            };
+            var bufferSizes = new[]
+            {
+                1,
+                32768 - 1,
+                32768,
+                32768 + 1,
+                32768 + 48 - 1,
+                32768 + 48,
+                32768 + 48 + 1,
+                5129951 - 1,
+                5129951,
+                5129951 + 1,
+            };
+
+            foreach (var seekOrigin in seekOrigins)
+            {
+                foreach (var offset in offsets)
+                {
+                    foreach (var bufferSize in bufferSizes)
+                    {
+                        yield return new TestCaseData(seekOrigin, offset, bufferSize);
+                    }
+                }
+            }
+        }
+
         public static IEnumerable<TestCaseData> GetSearchTests()
         {
             foreach (var tc in GetTests())
@@ -87,16 +125,9 @@ namespace CryptomatorApi.Tests
         }
 
         [Test]
-        [TestCase(1)]
-        [TestCase(32768/2)]
-        [TestCase(32768)]
-        [TestCase(32768 + 48)]
-        [TestCase((32768 + 48) / 2)]
-        [TestCase(5129950)]
-        [TestCase(5129951)]
-        [TestCase(5129952)]
-        [TestCase(0)]
-        public async Task Seek(int offset)
+
+        [TestCaseSource(nameof(GetSeekTests))]
+        public async Task Seek(SeekOrigin origin, int offset, int bufferSize)
         {
             var ct = CancellationToken.None;
             var api = _apiFactory.Create("testtest", "Data/Cryptomator/01/encrypted");
@@ -106,9 +137,9 @@ namespace CryptomatorApi.Tests
             await using var actualStream = await api.OpenReadAsync(encryptedVirtualPath, ct).ConfigureAwait(false);
             await using var expectedStream = File.OpenRead(originalFilePath);
 
-            actualStream.Seek(offset, SeekOrigin.Begin);
-            expectedStream.Seek(offset, SeekOrigin.Begin);
-            var actual = await GetMd5Hash(actualStream, ct).ConfigureAwait(false);
+            actualStream.Seek(offset, origin);
+            expectedStream.Seek(offset, origin);
+            var actual = await GetMd5Hash(actualStream, bufferSize, ct).ConfigureAwait(false);
             var expected = await GetMd5Hash(expectedStream, ct).ConfigureAwait(false);
             CollectionAssert.AreEqual(expected, actual);
         }
@@ -221,6 +252,22 @@ namespace CryptomatorApi.Tests
         {
             using var md5 = MD5.Create();
             var hash = await md5.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        }
+
+        private static async Task<string> GetMd5Hash(Stream stream, int bufferSize, CancellationToken cancellationToken)
+        {
+            using var md5 = MD5.Create();
+            var buffer = new byte[bufferSize];
+            int read;
+            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                md5.TransformBlock(buffer, 0, read, null, 0);
+            }
+
+            md5.TransformFinalBlock(new byte[0], 0, 0);
+
+            var hash = md5.Hash;
             return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
         }
 
