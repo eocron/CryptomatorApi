@@ -176,6 +176,31 @@ internal abstract class CryptomatorApiBase : ICryptomatorApi
                 }
                 else if (includeFiles && dir.Level == virtualDirHierarchy.Count)
                 {
+                    //It's a "backup directory file" > skip
+                    //https://docs.cryptomator.org/en/latest/security/architecture/
+                    
+                    /*
+                    Note
+                    
+                    This layer is optional and not required for a complete implementation of the Cryptomator Encryption Scheme. 
+                    It doesn’t provide any additional security. 
+                    Its sole purpose is to increase data recoverability in case of missing or damaged directory files.
+                    
+                    By obfuscating the hierarchy of cleartext paths using dir.c9r files, which contain directory IDs, 
+                    the directory structure is more vulnerable to problems like incomplete synchronization or bit rotting.
+                    
+                    When a directory file is missing or damaged, the dirPath cannot be computed, 
+                    which effectively makes the directory content inaccessible in the virtual filesystem. 
+                    In theory, the contents of the encrypted content of these files can be recovered. 
+                    But since the filename encryption is dependent on the directory ID of the parent folder, 
+                    which is only stored in the directory file, names of all items (files, directories, or symlinks) are lost.
+                    
+                    To alleviate this issue, a backup directory file will be stored during the creation of a directory. 
+                    Inside the ciphertext directory, a file named dirid.c9r will be created, 
+                    which contains the directory ID of its parent folder. It is encrypted like a regular ciphertext file.
+                    */
+                    if (fsi.Name == "dirid.c9r") continue;
+                    
                     yield return (dir, fsi);
                 }
         }
